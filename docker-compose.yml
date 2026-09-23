@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  aeromesh-db:
+    image: postgis/postgis:16-3.4
+    container_name: aeromesh_postgis
+    restart: always
+    environment:
+      POSTGRES_USER: aeromesh_user
+      POSTGRES_PASSWORD: aeromesh_password
+      POSTGRES_DB: aeromesh_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
