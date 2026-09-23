@@ -379,87 +379,33 @@ CREATE INDEX idx_inspector_zone ON inspector_jurisdictions USING GIST(assigned_z
 2. **Why PostgreSQL + PostGIS?**: PostGIS is the undisputed gold standard for GIS spatial indexing, spatial joins (`ST_DWithin`, `ST_Contains`), and polygon intersection checks required for plume mapping.
 3. **Why Progressive Web App (PWA)?**: Eliminates friction for citizens (no app store download required for 1-tap photo reporting) while delivering desktop-class performance for command center operators.
 
-### UI/UX Design Philosophy & Full Design System
+### UI/UX Design Philosophy & Design System
 
-#### Design Reference & Philosophy
-* **Inspiration**: Clean, high-usability **Fleet Management / Operations Software dashboards** — generous whitespace, clear status toolbars, high-contrast legible data, intuitive navigation. NOT futuristic dark/sci-fi themes.
-* **Core Principle**: Every screen must be immediately understandable to a non-technical government officer during a pollution crisis. Clarity and ease of access always win over visual complexity.
-* **Responsive Strategy**: Two distinct view modes in one PWA codebase — Desktop Command Center for operators, Mobile Citizen Portal for the public.
+> 📖 **Full Reference**: See [`docs/design/DESIGN_SYSTEM.md`](./docs/design/DESIGN_SYSTEM.md) for the complete design system including color palettes, typography scale, layout blueprints, component guidelines, and mockups.
 
-#### Color Palette
-| Token | Hex | Tailwind Class | Usage |
-| :--- | :--- | :--- | :--- |
-| Page Background | `#f8fafc` | `bg-slate-50` | Main page canvas |
-| Card / Sidebar | `#ffffff` | `bg-white` | Panels, cards, sidebars |
-| Primary Action | `#2563eb` | `bg-blue-600` | Primary buttons, active nav |
-| Primary Tint | `#eff6ff` | `bg-blue-50` | Active nav background, highlights |
-| Success / Normal | `#16a34a` | `text-green-600` | Good AQI, healthy station status |
-| Warning / Moderate | `#d97706` | `text-amber-600` | Elevated pollution, caution alerts |
-| Danger / Hazardous | `#dc2626` | `text-red-600` | Severe plumes, dispatch alerts |
-| Border / Divider | `#e2e8f0` | `border-slate-200` | Card borders, table rows |
-| Text Primary | `#0f172a` | `text-slate-900` | Headings, metric values |
-| Text Secondary | `#64748b` | `text-slate-500` | Labels, timestamps, metadata |
+#### Summary
+* **Design Approach**: **"Map-First Operations Interface"** — inspired by Windy.com and IQAir, not generic enterprise dashboards.
+* **Core Principle**: The interactive geospatial map IS the dashboard. All other UI elements (stat cards, alert feed, controls) float on top of or flank the map — they never push it down.
+* **Color Language**: EPA-standard AQI color scale (Green→Yellow→Orange→Red→Purple→Maroon) for all air quality data. Clean slate/white palette for UI chrome.
+* **Map Basemap**: Dark satellite tiles (CartoDB Dark Matter, free, no API key) — AQI colored markers and plume overlays are most visible against dark backgrounds.
+* **Sidebar**: Icon-only, 72px wide — maximizes map real estate. Tooltip on hover reveals label.
+* **Dual Interface**: Desktop Command Center (operators) uses slide-in panels; Mobile Citizen Portal uses tab bar navigation with a large circular AQI gauge and prominent "Report" button.
+* **Accessibility**: EPA color standard + text labels on all badges (never color-only). Large tap targets on mobile (min 48px). High-contrast text on light surfaces.
 
-#### Typography
-| Element | Size | Weight | Tailwind |
-| :--- | :--- | :--- | :--- |
-| Page Title | 24px | SemiBold 600 | `text-2xl font-semibold` |
-| Section Heading | 16px | SemiBold 600 | `text-base font-semibold` |
-| Card Label | 12px | Medium 500 | `text-xs font-medium uppercase tracking-wide` |
-| Metric Value (KPI) | 28px | Bold 700 | `text-3xl font-bold` |
-| Body / Paragraph | 14px | Regular 400 | `text-sm` |
-| Caption / Metadata | 12px | Regular 400 | `text-xs text-slate-500` |
-| Font Family | Inter | — | Loaded via Google Fonts CDN |
-
-#### Layout Blueprint (Desktop — Command Center)
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  TOPBAR: Logo | Breadcrumb | Node Selector | Alert Bell | Avatar │
-├──────────┬──────────────────────────────────────────────────────┤
-│          │  [KPI CARDS ROW: Active Events | PM2.5 Max | Wind]   │
-│ SIDEBAR  ├──────────────────────────────────┬───────────────────┤
-│  (240px) │                                  │                   │
-│  - Dashboard                                │  ALERT / EVENT    │
-│  - Map View    INTERACTIVE MAP (Leaflet)    │  DETAIL PANEL     │
-│  - Alerts  │   Layers: Sensors, Fire,       │  (scrollable      │
-│  - Report  │   Plumes, Wind Vectors         │   incident feed)  │
-│  - History │                                │                   │
-│  - Settings│                                │                   │
-│          │                                  │                   │
-└──────────┴──────────────────────────────────┴───────────────────┘
-```
-
-#### Page / View Inventory
-| Route | View Name | Primary User | Description |
-| :--- | :--- | :--- | :--- |
-| `/` | Command Center Dashboard | Inspector / Admin | KPI cards + interactive map + live event feed |
-| `/map` | Full Map View | Inspector | Expanded corridor map with all layer toggles |
-| `/alerts` | Alert History | Admin / Inspector | Paginated table of all events, dispatch logs |
-| `/report` | Citizen Reporting Portal | Citizen (Mobile) | 1-tap photo upload + GPS tag + AI result |
-| `/admin` | System Admin | Admin | Node health, user roles, sensor status |
-
-#### Component Inventory
-| Component | Description |
+#### Key Design Decisions Documented
+| Decision | Rationale |
 | :--- | :--- |
-| `<Sidebar />` | Fixed 240px left nav, collapsible to icon-only on mobile |
-| `<TopBar />` | Logo, node selector dropdown, notification bell, user avatar |
-| `<StatCard />` | KPI metric card — icon, label (12px uppercase), value (28px bold), trend badge |
-| `<AlertBanner />` | Full-width colored banner (red/amber) for active high-severity events |
-| `<StatusBadge />` | Inline colored pill (green/amber/red) for sensor/plume/alert status |
-| `<MapView />` | react-leaflet container with layer toggles (Sensors, Hotspots, Plumes, Wind) |
-| `<EventFeed />` | Scrollable list of real-time detected events with timestamp & source badges |
-| `<DataTable />` | Sortable, paginated table for alert history and sensor logs |
-| `<ReportModal />` | Mobile-first camera capture + GPS + AI result display |
+| Map takes 65–70% of viewport | AeroMesh's core value is geospatial — maximize the map |
+| Dark satellite base tiles | Colored AQI markers and plume polygons read best on dark backgrounds |
+| Icon-only sidebar (72px) | Frees ~170px of additional horizontal map space vs. text sidebar |
+| KPI cards float inside the map | Avoids pushing map down — cards use `position: absolute` |
+| Alert panel is slide-in/dismissible | Users choose full-map mode vs. data mode based on their task |
+| EPA AQI color standard | Zero learning curve for environmental professionals and judges |
 
-#### Spacing System
-* **Base unit**: 4px
-* **Card padding**: 24px (`p-6`)
-* **Section gap**: 24px (`gap-6`)
-* **Sidebar item padding**: 10px 16px (`py-2.5 px-4`)
-* **Table row height**: 48px minimum
-* **Card border radius**: 12px (`rounded-xl`)
 
 ---
+
+
 
 ## 9. 7-Day Complete Development Roadmap
 
