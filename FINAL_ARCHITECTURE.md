@@ -348,12 +348,12 @@ CREATE INDEX idx_inspector_zone ON inspector_jurisdictions USING GIST(assigned_z
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ FRONTEND FRAMEWORK & PWA DELIVERY MODEL                                │
-│ • Vite + React 18 (Fast client rendering for single PWA codebase)       │
-│ • Desktop View: Inter-Agency Command Center (Leaflet maps & Canvas 2D) │
+│ • Vite + React 19 (Fast client rendering for single PWA codebase)       │
+│ • Desktop View: Inter-Agency Command Center (Leaflet maps & Recharts)  │
 │ • Mobile View: Citizen Reporting Portal (Camera & Geolocation API)    │
-│ • Tailwind CSS (Custom glassmorphism design system)                    │
-│ • Leaflet.js / Mapbox GL (Interactive geospatial corridor map)         │
-│ • Canvas 2D (60fps wind particle vector animation engine)              │
+│ • Tailwind CSS 4 (Clean Fleet Operations Design System — light theme)  │
+│ • react-leaflet + Leaflet.js (Interactive geospatial corridor map)     │
+│ • react-router-dom (Multi-view routing: Dashboard, Citizen, Admin)     │
 │ • Recharts (Time-series AQI trends & multi-source confidence bars)     │
 ├────────────────────────────────────────────────────────────────────────┤
 │ BACKEND & DECISION SERVICES                                            │
@@ -379,10 +379,85 @@ CREATE INDEX idx_inspector_zone ON inspector_jurisdictions USING GIST(assigned_z
 2. **Why PostgreSQL + PostGIS?**: PostGIS is the undisputed gold standard for GIS spatial indexing, spatial joins (`ST_DWithin`, `ST_Contains`), and polygon intersection checks required for plume mapping.
 3. **Why Progressive Web App (PWA)?**: Eliminates friction for citizens (no app store download required for 1-tap photo reporting) while delivering desktop-class performance for command center operators.
 
-### UI/UX Design Philosophy & Systems
-* **Clean & Intuitive Fleet Operations Aesthetic**: Inspired by high-usability logistics and fleet dashboards (clean light-theme, high-contrast badges, generous whitespace, and clear status toolbars).
-* **Clarity & Accessibility First**: Prioritizing rapid readability and ease of access over crowded or dark futuristic themes.
-* **Component Architecture**: Styled using **Tailwind CSS 4** and **shadcn/ui** components (clean cards, structured tables, clear filter dropdowns, and distinct alert banners).
+### UI/UX Design Philosophy & Full Design System
+
+#### Design Reference & Philosophy
+* **Inspiration**: Clean, high-usability **Fleet Management / Operations Software dashboards** — generous whitespace, clear status toolbars, high-contrast legible data, intuitive navigation. NOT futuristic dark/sci-fi themes.
+* **Core Principle**: Every screen must be immediately understandable to a non-technical government officer during a pollution crisis. Clarity and ease of access always win over visual complexity.
+* **Responsive Strategy**: Two distinct view modes in one PWA codebase — Desktop Command Center for operators, Mobile Citizen Portal for the public.
+
+#### Color Palette
+| Token | Hex | Tailwind Class | Usage |
+| :--- | :--- | :--- | :--- |
+| Page Background | `#f8fafc` | `bg-slate-50` | Main page canvas |
+| Card / Sidebar | `#ffffff` | `bg-white` | Panels, cards, sidebars |
+| Primary Action | `#2563eb` | `bg-blue-600` | Primary buttons, active nav |
+| Primary Tint | `#eff6ff` | `bg-blue-50` | Active nav background, highlights |
+| Success / Normal | `#16a34a` | `text-green-600` | Good AQI, healthy station status |
+| Warning / Moderate | `#d97706` | `text-amber-600` | Elevated pollution, caution alerts |
+| Danger / Hazardous | `#dc2626` | `text-red-600` | Severe plumes, dispatch alerts |
+| Border / Divider | `#e2e8f0` | `border-slate-200` | Card borders, table rows |
+| Text Primary | `#0f172a` | `text-slate-900` | Headings, metric values |
+| Text Secondary | `#64748b` | `text-slate-500` | Labels, timestamps, metadata |
+
+#### Typography
+| Element | Size | Weight | Tailwind |
+| :--- | :--- | :--- | :--- |
+| Page Title | 24px | SemiBold 600 | `text-2xl font-semibold` |
+| Section Heading | 16px | SemiBold 600 | `text-base font-semibold` |
+| Card Label | 12px | Medium 500 | `text-xs font-medium uppercase tracking-wide` |
+| Metric Value (KPI) | 28px | Bold 700 | `text-3xl font-bold` |
+| Body / Paragraph | 14px | Regular 400 | `text-sm` |
+| Caption / Metadata | 12px | Regular 400 | `text-xs text-slate-500` |
+| Font Family | Inter | — | Loaded via Google Fonts CDN |
+
+#### Layout Blueprint (Desktop — Command Center)
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  TOPBAR: Logo | Breadcrumb | Node Selector | Alert Bell | Avatar │
+├──────────┬──────────────────────────────────────────────────────┤
+│          │  [KPI CARDS ROW: Active Events | PM2.5 Max | Wind]   │
+│ SIDEBAR  ├──────────────────────────────────┬───────────────────┤
+│  (240px) │                                  │                   │
+│  - Dashboard                                │  ALERT / EVENT    │
+│  - Map View    INTERACTIVE MAP (Leaflet)    │  DETAIL PANEL     │
+│  - Alerts  │   Layers: Sensors, Fire,       │  (scrollable      │
+│  - Report  │   Plumes, Wind Vectors         │   incident feed)  │
+│  - History │                                │                   │
+│  - Settings│                                │                   │
+│          │                                  │                   │
+└──────────┴──────────────────────────────────┴───────────────────┘
+```
+
+#### Page / View Inventory
+| Route | View Name | Primary User | Description |
+| :--- | :--- | :--- | :--- |
+| `/` | Command Center Dashboard | Inspector / Admin | KPI cards + interactive map + live event feed |
+| `/map` | Full Map View | Inspector | Expanded corridor map with all layer toggles |
+| `/alerts` | Alert History | Admin / Inspector | Paginated table of all events, dispatch logs |
+| `/report` | Citizen Reporting Portal | Citizen (Mobile) | 1-tap photo upload + GPS tag + AI result |
+| `/admin` | System Admin | Admin | Node health, user roles, sensor status |
+
+#### Component Inventory
+| Component | Description |
+| :--- | :--- |
+| `<Sidebar />` | Fixed 240px left nav, collapsible to icon-only on mobile |
+| `<TopBar />` | Logo, node selector dropdown, notification bell, user avatar |
+| `<StatCard />` | KPI metric card — icon, label (12px uppercase), value (28px bold), trend badge |
+| `<AlertBanner />` | Full-width colored banner (red/amber) for active high-severity events |
+| `<StatusBadge />` | Inline colored pill (green/amber/red) for sensor/plume/alert status |
+| `<MapView />` | react-leaflet container with layer toggles (Sensors, Hotspots, Plumes, Wind) |
+| `<EventFeed />` | Scrollable list of real-time detected events with timestamp & source badges |
+| `<DataTable />` | Sortable, paginated table for alert history and sensor logs |
+| `<ReportModal />` | Mobile-first camera capture + GPS + AI result display |
+
+#### Spacing System
+* **Base unit**: 4px
+* **Card padding**: 24px (`p-6`)
+* **Section gap**: 24px (`gap-6`)
+* **Sidebar item padding**: 10px 16px (`py-2.5 px-4`)
+* **Table row height**: 48px minimum
+* **Card border radius**: 12px (`rounded-xl`)
 
 ---
 

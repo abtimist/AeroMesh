@@ -1,9 +1,64 @@
 @import "tailwindcss";
 
+/* ============================================================
+   AeroMesh Design System — Global CSS
+   Design Reference: Clean Fleet Management Operations Dashboard
+   Philosophy: Clarity, Usability, Generous Spacing, Accessibility
+   ============================================================ */
+
+/* --- Typography --- */
+/* Inter is loaded via Google Fonts in index.html */
+
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
-    background-color: #f8fafc;
-    color: #0f172a;
+    margin: 0;
+    background-color: #f8fafc;   /* slate-50 — clean off-white page background */
+    color: #0f172a;               /* slate-900 — near-black for primary text */
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  #root {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
   }
 }
+
+/* ============================================================
+   AeroMesh Color Palette Tokens (for reference in components)
+   Use Tailwind classes where possible, keep this as documentation
+   ============================================================
+
+   BACKGROUNDS
+   --bg-page:        #f8fafc  (slate-50)   — main page background
+   --bg-sidebar:     #ffffff  (white)       — sidebar & card surfaces
+   --bg-card:        #ffffff  (white)       — data cards
+
+   PRIMARY (Action / Brand)
+   --primary:        #2563eb  (blue-600)    — primary buttons, active nav items
+   --primary-light:  #eff6ff  (blue-50)    — primary tinted backgrounds
+
+   STATUS COLORS
+   --success:        #16a34a  (green-600)  — healthy / normal readings
+   --warning:        #d97706  (amber-600)  — moderate alerts
+   --danger:         #dc2626  (red-600)    — severe / hazardous alerts
+   --info:           #0891b2  (cyan-600)   — informational, wind/weather
+
+   NEUTRAL BORDERS & TEXT
+   --border:         #e2e8f0  (slate-200)  — card borders, dividers
+   --text-muted:     #64748b  (slate-500)  — secondary labels, metadata
+   --text-primary:   #0f172a  (slate-900)  — headings, primary content
+
+   ============================================================ */
