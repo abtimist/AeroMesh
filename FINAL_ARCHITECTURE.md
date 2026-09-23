@@ -379,6 +379,11 @@ CREATE INDEX idx_inspector_zone ON inspector_jurisdictions USING GIST(assigned_z
 2. **Why PostgreSQL + PostGIS?**: PostGIS is the undisputed gold standard for GIS spatial indexing, spatial joins (`ST_DWithin`, `ST_Contains`), and polygon intersection checks required for plume mapping.
 3. **Why Progressive Web App (PWA)?**: Eliminates friction for citizens (no app store download required for 1-tap photo reporting) while delivering desktop-class performance for command center operators.
 
+### UI/UX Design Philosophy & Systems
+* **Clean & Intuitive Fleet Operations Aesthetic**: Inspired by high-usability logistics and fleet dashboards (clean light-theme, high-contrast badges, generous whitespace, and clear status toolbars).
+* **Clarity & Accessibility First**: Prioritizing rapid readability and ease of access over crowded or dark futuristic themes.
+* **Component Architecture**: Styled using **Tailwind CSS 4** and **shadcn/ui** components (clean cards, structured tables, clear filter dropdowns, and distinct alert banners).
+
 ---
 
 ## 9. 7-Day Complete Development Roadmap

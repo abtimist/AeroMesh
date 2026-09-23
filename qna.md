@@ -141,3 +141,13 @@ The system works on two distinct time horizons:
 2. **Faraway Downwind Places (5 to 50 km)**:
    * **Predictive Early Warning**: The smoke doesn't stay near the factory—wind carries it downwind. 
    * **Action**: Our **Gaussian Plume Dispersion Model** projects where that smoke cloud will drift over the next 3, 6, and 12 hours, warning downstream cities **hours before** the pollution reaches them.
+
+---
+
+### 17. What is our design philosophy for the UI/UX? (Why avoid complex futuristic dark modes?)
+
+* **Design Philosophy**: Focus on **Clarity, Usability, Generous Spacing, and Accessibility**.
+* **Design Reference**: Inspired by clean, intuitive Fleet Management software dashboards (light/clean theme, high-contrast typography, clear status indicators, intuitive navigation bar, and actionable tools).
+* **Key Principles**:
+  * **Zero Friction for Citizens**: Clean, large tap targets for 1-click photo reporting without overwhelming options.
+  * **Command Center Usability**: High legibility for inspectors and municipal operators during crisis situations—using clear metric cards, visible filter toggles, clean map controls, and structured status badges instead of dark, crowded Sci-Fi visuals.
