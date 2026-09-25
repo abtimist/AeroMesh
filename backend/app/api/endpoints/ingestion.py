@@ -5,6 +5,7 @@ from app.services.meteo_client import OpenMeteoClient
 from app.services.firms_client import NASA_FIRMSClient
 from app.db.session import SessionLocal
 from app.models.report import CitizenReport
+from app.services.laya_cv import laya_cv
 import asyncio
 import shutil
 import os
@@ -80,14 +81,18 @@ async def submit_citizen_report(
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(photo.file, buffer)
             
-        # Create PostGIS geometry point: POINT(lon lat)
+        # 2. Run Local PyTorch CV Verification (Laya Engine)
+        cv_result = laya_cv.analyze_image(filepath)
+        
+        # 3. Create PostGIS geometry point: POINT(lon lat)
         point = f"SRID=4326;POINT({lon} {lat})"
         
-        # Save to DB
+        # 4. Save to DB
         report = CitizenReport(
             device_id=device_id,
             location=point,
-            image_url=filepath
+            image_url=filepath,
+            laya_confidence_score=cv_result.get("confidence", 0.0)
         )
         db.add(report)
         db.commit()
@@ -96,7 +101,8 @@ async def submit_citizen_report(
         return {
             "status": "success", 
             "message": "Report submitted successfully",
-            "report_id": report.id
+            "report_id": report.id,
+            "laya_analysis": cv_result
         }
     except Exception as e:
         db.rollback()
