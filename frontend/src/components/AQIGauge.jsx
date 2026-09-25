@@ -57,7 +57,7 @@ export default function AQIGauge({ pm25Value = 198 }) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={240} height={210} viewBox="0 0 240 210">
+      <svg width={240} height={240} viewBox="0 0 240 240">
         {/* Background arc */}
         <path d={bgPath} fill="none" stroke="#e2e8f0" strokeWidth={16} strokeLinecap="round" />
 

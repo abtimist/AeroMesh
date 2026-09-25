@@ -105,17 +105,21 @@ export default function CitizenPortalPage() {
       {/* ── Main scrollable content ── */}
       <div className="flex-1 overflow-y-auto">
 
-        {/* Alert banner — color = AQI level */}
-        <div className={`${bannerBg} text-white px-4 py-3 text-sm font-medium leading-snug`}>
-          ⚠️ {advice}
-        </div>
+        {/* Alert banner — only on home */}
+        {activeTab === 'home' && (
+          <div className={`${bannerBg} text-white px-4 py-3 text-sm font-medium leading-snug`}>
+            ⚠️ {advice}
+          </div>
+        )}
 
         {activeTab === 'home' && (
           <div className="p-4 flex flex-col gap-4">
             <h2 className="font-bold text-lg text-slate-800">Welcome, Citizen</h2>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col items-center">
               <p className="text-sm text-slate-500 mb-2">Current AQI in your area</p>
-              <AQIGauge pm25Value={pm25} />
+              <div className="h-64 flex items-center justify-center">
+                <AQIGauge pm25Value={pm25} />
+              </div>
             </div>
             {/* Weather mini-cards */}
             <div className="grid grid-cols-2 gap-3">
@@ -130,20 +134,20 @@ export default function CitizenPortalPage() {
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
                 <div className="flex items-center gap-2 text-slate-500 mb-1">
                   <Layers className="w-4 h-4" />
-                  <span className="text-xs font-medium uppercase tracking-wide">Mixing Height</span>
+                  <span className="text-xs font-medium uppercase tracking-wide">Humidity</span>
                 </div>
-                <p className="text-lg font-bold text-slate-900">{mixingHeight}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Pollution trapped below</p>
+                <p className="text-lg font-bold text-slate-900">42%</p>
+                <p className="text-xs text-slate-400 mt-0.5">Dry air</p>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'report' && (
-          <>
-            {/* AQI Gauge */}
-            <div className="bg-white mx-4 mt-4 rounded-2xl shadow-sm border border-slate-100 p-4 flex justify-center">
-              <AQIGauge pm25Value={pm25} />
+          <div className="p-4 flex flex-col gap-6 h-full mt-4">
+            <div className="text-center">
+              <h2 className="font-bold text-2xl text-slate-800">File a Report</h2>
+              <p className="text-slate-500 text-sm mt-2">Spotted an illegal factory emission or stubble burning? Upload a photo to notify authorities instantly.</p>
             </div>
 
             {/* Report Button — full-width, massive, impossible to miss */}
@@ -186,7 +190,7 @@ export default function CitizenPortalPage() {
                 disabled={uploading || uploadSuccess}
               />
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'map' && (
