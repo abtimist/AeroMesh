@@ -1,5 +1,4 @@
 import Topbar from '../components/Topbar';
-import Sidebar from '../components/Sidebar';
 import { useTheme } from '../hooks';
 
 export default function DashboardLayout({ children, alertCount, activeNode, setActiveNode }) {
@@ -10,9 +9,8 @@ export default function DashboardLayout({ children, alertCount, activeNode, setA
       {/* Topbar spans full width */}
       <Topbar alertCount={alertCount} dark={dark} onToggleDark={toggle} activeNode={activeNode} setActiveNode={setActiveNode} />
 
-      {/* Below topbar: sidebar + main content */}
+      {/* Below topbar: main content */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
         <main className="flex-1 relative overflow-hidden">
           {children}
         </main>

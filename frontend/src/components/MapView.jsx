@@ -131,7 +131,14 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         setLoading(false);
       }
     }
+    
+    // Initial fetch
     fetchData();
+    
+    // Poll every 10 seconds for real-time live data
+    const intervalId = setInterval(fetchData, 10000);
+    
+    return () => clearInterval(intervalId);
   }, [activeNode]);
 
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
@@ -143,6 +150,16 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     opacity: 0.7,
     weight: 1.5,
     dashArray: '4 4',
+  };
+
+  const onEachPlumeFeature = (feature, layer) => {
+    if (feature.properties) {
+      layer.bindPopup(`
+        <div class="text-sm font-medium">🚨 Toxic Plume Dispersion Forecast</div>
+        <div class="text-xs text-slate-500 mt-1">Severity: <span class="font-bold text-red-600">${feature.properties.severity}</span></div>
+        <div class="text-[10px] text-slate-400 mt-1">AeroMesh ML Model Prediction based on wind vectors and emission source.</div>
+      `);
+    }
   };
 
   const tileUrl = dark 
@@ -205,7 +222,13 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                     </Popup>
                   </CircleMarker>
                 )}
-                {layers.plumes && currentConfig.plume && <GeoJSON data={currentConfig.plume} style={plumeStyle} />}
+                {layers.plumes && currentConfig.plume && (
+                  <GeoJSON 
+                    data={currentConfig.plume} 
+                    style={plumeStyle} 
+                    onEachFeature={onEachPlumeFeature} 
+                  />
+                )}
               </div>
             );
           }
@@ -226,7 +249,11 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                 </CircleMarker>
               )}
               {layers.plumes && e.plume_polygon && (
-                <GeoJSON data={e.plume_polygon} style={plumeStyle} />
+                <GeoJSON 
+                  data={e.plume_polygon} 
+                  style={plumeStyle} 
+                  onEachFeature={onEachPlumeFeature}
+                />
               )}
             </div>
           );

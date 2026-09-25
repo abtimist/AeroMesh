@@ -171,12 +171,26 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
           
           {activeDropdown === 'notifications' && (
              <div
-             className="absolute right-0 top-full mt-1 w-64 rounded-xl shadow-xl py-2 z-50 border"
+             className="absolute right-0 top-full mt-1 w-72 rounded-xl shadow-xl py-2 z-50 border"
              style={{ background: surface, borderColor: border }}
            >
-             <p className="px-3 py-1 text-xs font-semibold" style={{ color: text }}>Notifications</p>
-             <div className="px-3 py-2 text-sm border-t mt-1" style={{ borderColor: border, color: muted }}>
-               You have {alertCount} new alerts.
+             <div className="flex items-center justify-between px-3 py-1 mb-1">
+               <p className="text-xs font-semibold" style={{ color: text }}>Notifications</p>
+               <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">{alertCount} New</span>
+             </div>
+             <div className="border-t max-h-64 overflow-y-auto" style={{ borderColor: border }}>
+               <div className="px-3 py-2 border-b hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition" style={{ borderColor: border }}>
+                 <p className="text-xs font-medium" style={{ color: text }}>🚨 EV-9942: Hazmat Plume</p>
+                 <p className="text-[10px] mt-0.5" style={{ color: muted }}>Okhla Industrial Area · 2m ago</p>
+               </div>
+               <div className="px-3 py-2 border-b hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition" style={{ borderColor: border }}>
+                 <p className="text-xs font-medium" style={{ color: text }}>🔥 EV-0081: Stubble Burning</p>
+                 <p className="text-[10px] mt-0.5" style={{ color: muted }}>Haryana (Panipat) · 15m ago</p>
+               </div>
+               <div className="px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
+                 <p className="text-xs font-medium" style={{ color: text }}>⚠️ EV-0105: PM2.5 Spike</p>
+                 <p className="text-[10px] mt-0.5" style={{ color: muted }}>Noida (Sec 125) · 1h ago</p>
+               </div>
              </div>
            </div>
           )}
