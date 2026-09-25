@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, ChevronDown, ChevronUp, Navigation } from 'lucide-react';
+import { Clock, ChevronDown, ChevronUp, Navigation, Loader2, CheckCircle2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 const SEVERITY_BORDER = {
@@ -11,6 +11,8 @@ const SEVERITY_BORDER = {
 
 export default function AlertCard({ event }) {
   const [expanded, setExpanded] = useState(false);
+  const [dispatchStatus, setDispatchStatus] = useState('idle'); // idle, loading, success
+  const [unit, setUnit] = useState(null);
 
   const {
     id = '#EV-0001',
@@ -25,6 +27,25 @@ export default function AlertCard({ event }) {
     plume = 'PBLH 1100m | Wind 3m/s NW',
     sources = ['Continuous Emission Monitoring System (CEMS)', 'Ground Sensor (AQI 480)', 'Satellite: Sentinel-5P NO2'],
   } = event || {};
+
+  const handleDispatch = async (e) => {
+    e.stopPropagation();
+    if (dispatchStatus !== 'idle') return;
+
+    setDispatchStatus('loading');
+    try {
+      // In a real app we would use the actual event id instead of parsing mock string id
+      const numericalId = parseInt(id.replace(/[^0-9]/g, ''), 10) || 9942;
+      const res = await fetch(`http://localhost:8000/api/analysis/dispatch/${numericalId}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Dispatch failed');
+      const data = await res.json();
+      setUnit(data.unit);
+      setDispatchStatus('success');
+    } catch (err) {
+      console.error(err);
+      setDispatchStatus('idle'); // Reset on failure
+    }
+  };
 
   return (
     <div
@@ -82,14 +103,31 @@ export default function AlertCard({ event }) {
           </div>
 
           <button
-            onClick={e => e.stopPropagation()}
-            className="w-full flex items-center justify-center gap-2 py-2 text-white text-xs font-semibold rounded-lg transition"
-            style={{ background: 'var(--color-primary)' }}
-            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-            onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+            onClick={handleDispatch}
+            disabled={dispatchStatus !== 'idle'}
+            className={`w-full flex items-center justify-center gap-2 py-2 text-white text-xs font-semibold rounded-lg transition ${
+              dispatchStatus === 'success' ? 'bg-green-600' : ''
+            }`}
+            style={{ background: dispatchStatus === 'success' ? '#16a34a' : 'var(--color-primary)' }}
+            onMouseEnter={e => { if (dispatchStatus === 'idle') e.currentTarget.style.filter = 'brightness(1.1)'; }}
+            onMouseLeave={e => { if (dispatchStatus === 'idle') e.currentTarget.style.filter = 'brightness(1)'; }}
           >
-            <Navigation className="w-3.5 h-3.5" />
-            Dispatch Inspector
+            {dispatchStatus === 'loading' ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Dispatching...
+              </>
+            ) : dispatchStatus === 'success' ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Inspector Dispatched ({unit})
+              </>
+            ) : (
+              <>
+                <Navigation className="w-3.5 h-3.5" />
+                Dispatch Inspector
+              </>
+            )}
           </button>
         </div>
       )}
