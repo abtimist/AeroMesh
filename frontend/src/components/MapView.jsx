@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import KPIStrip from './KPIStrip';
 import LayerControl from './LayerControl';
@@ -38,7 +38,43 @@ const MOCK_PLUME = {
 
 const MOCK_FIRE = { lat: 29.390, lon: 76.970 };
 
-export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
+const NODE_CONFIG = {
+  'India Node': { center: [28.6139, 77.209], zoom: 10, sensors: MOCK_SENSORS, plume: MOCK_PLUME, fire: MOCK_FIRE },
+  'Brazil Node': { 
+    center: [-23.5505, -46.6333], zoom: 10, 
+    sensors: [
+      { id: 101, lat: -23.5505, lon: -46.6333, pm25: 145, aqiLevel: 'UNHEALTHY', location: 'São Paulo (Centro)' },
+      { id: 102, lat: -23.58, lon: -46.68, pm25: 210, aqiLevel: 'VERY_UNHEALTHY', location: 'Pinheiros' }
+    ],
+    plume: null, fire: { lat: -23.6, lon: -46.5 }
+  },
+  'China Node': {
+    center: [39.9042, 116.4074], zoom: 10,
+    sensors: [
+      { id: 201, lat: 39.9042, lon: 116.4074, pm25: 280, aqiLevel: 'VERY_UNHEALTHY', location: 'Beijing (Dongcheng)' },
+      { id: 202, lat: 39.95, lon: 116.3, pm25: 190, aqiLevel: 'UNHEALTHY', location: 'Haidian' }
+    ],
+    plume: null, fire: null
+  },
+  'South Africa Node': {
+    center: [-26.2041, 28.0473], zoom: 10,
+    sensors: [
+      { id: 301, lat: -26.2041, lon: 28.0473, pm25: 85, aqiLevel: 'MODERATE', location: 'Johannesburg (CBD)' },
+      { id: 302, lat: -26.1, lon: 28.1, pm25: 110, aqiLevel: 'USG', location: 'Sandton' }
+    ],
+    plume: null, fire: null
+  }
+};
+
+function MapController({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, zoom, { duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
+}
+
+export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose }) {
   const [layers, setLayers] = useState({
     sensors: true, plumes: true, fire: true, wind: true, corridors: true,
   });
@@ -64,28 +100,39 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
         if (sensorRes && sensorRes.ok) fetchedSensors = await sensorRes.json();
         if (eventRes && eventRes.ok) fetchedEvents = await eventRes.json();
 
+        const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
+        
         // Fallback to mock data if DB is empty or API is down (for demo purposes)
         if (fetchedSensors.length === 0) {
-          setSensors(MOCK_SENSORS);
+          setSensors(config.sensors);
         } else {
           setSensors(fetchedSensors);
         }
 
         if (fetchedEvents.length === 0) {
-          setEvents([{ type: 'mock_fire', lat: MOCK_FIRE.lat, lon: MOCK_FIRE.lon }]);
+          if (config.fire) {
+            setEvents([{ type: 'mock_fire', lat: config.fire.lat, lon: config.fire.lon }]);
+          } else {
+            setEvents([]);
+          }
         } else {
           setEvents(fetchedEvents);
         }
       } catch (err) {
         console.error("Failed to fetch map data", err);
-        setSensors(MOCK_SENSORS);
-        setEvents([{ type: 'mock_fire', lat: MOCK_FIRE.lat, lon: MOCK_FIRE.lon }]);
+        const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
+        setSensors(config.sensors);
+        if (config.fire) {
+          setEvents([{ type: 'mock_fire', lat: config.fire.lat, lon: config.fire.lon }]);
+        } else {
+          setEvents([]);
+        }
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, []);
+  }, [activeNode]);
 
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -102,16 +149,20 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
     ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
     : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 
+  const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
+
   return (
     <div className="relative w-full h-full overflow-hidden">
       <MapContainer
-        center={[28.6139, 77.209]}
-        zoom={10}
+        center={currentConfig.center}
+        zoom={currentConfig.zoom}
         scrollWheelZoom
         zoomControl={false}
         attributionControl={false}
         style={{ height: '100%', width: '100%', background: dark ? '#0d1117' : '#f8fafc' }}
       >
+        <MapController center={currentConfig.center} zoom={currentConfig.zoom} />
+        
         <TileLayer
           url={tileUrl}
           attribution='Esri, HERE, Garmin, FAO, NOAA, USGS, EPA'
@@ -154,7 +205,7 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
                     </Popup>
                   </CircleMarker>
                 )}
-                {layers.plumes && <GeoJSON data={MOCK_PLUME} style={plumeStyle} />}
+                {layers.plumes && currentConfig.plume && <GeoJSON data={currentConfig.plume} style={plumeStyle} />}
               </div>
             );
           }

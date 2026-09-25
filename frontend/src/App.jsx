@@ -1,20 +1,12 @@
-// App.jsx — Root router
-// KEY ARCHITECTURAL DECISION:
-//   - Mobile devices (< 768px) → automatically get CitizenPortalPage
-//   - Desktop devices → get the Command Center (DashboardPage)
-//   - There is NO camera/report link in the desktop sidebar
-//   - The /report URL can still be shared directly to citizens via WhatsApp/SMS
-//
-// This matches the PWA design: one codebase, two completely separate experiences.
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { useState } from 'react';
+import './index.css';
+import { useDeviceType } from './hooks';
 
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import './index.css'
-import { useDeviceType } from './hooks'
+import DashboardPage     from './pages/DashboardPage';
+import CitizenPortalPage from './pages/CitizenPortalPage';
 
-import DashboardPage     from './pages/DashboardPage'
-import CitizenPortalPage from './pages/CitizenPortalPage'
-
-function SmartRoot() {
+function SmartRoot({ activeNode, setActiveNode, initialPanel }) {
   const device = useDeviceType();
 
   // Mobile users automatically get the citizen portal — no routing needed
@@ -23,7 +15,7 @@ function SmartRoot() {
   }
 
   // Desktop users get the full command center
-  return <DashboardPage />;
+  return <DashboardPage activeNode={activeNode} setActiveNode={setActiveNode} initialPanel={initialPanel} />;
 }
 
 function NotFoundPage() {
@@ -35,15 +27,21 @@ function NotFoundPage() {
         <a href="/" className="text-sm text-blue-600 hover:underline">← Back to Dashboard</a>
       </div>
     </div>
-  )
+  );
 }
 
 export default function App() {
+  const [activeNode, setActiveNode] = useState('India Node');
+
   return (
     <BrowserRouter>
       <Routes>
-        {/* / → automatically detects device and routes accordingly */}
-        <Route path="/"       element={<SmartRoot />} />
+        <Route path="/"       element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
+        
+        {/* Map dashboard routes to the same SmartRoot so they don't 404, optionally opening panels */}
+        <Route path="/alerts" element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="alerts" />} />
+        <Route path="/map"    element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
+        <Route path="/history" element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="history" />} />
 
         {/* /report → always citizen portal — shareable link for WhatsApp/SMS dispatch */}
         <Route path="/report" element={<CitizenPortalPage />} />
@@ -51,5 +49,5 @@ export default function App() {
         <Route path="*"       element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

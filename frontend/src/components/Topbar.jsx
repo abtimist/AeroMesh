@@ -7,8 +7,7 @@ import { Bell, ChevronDown, Search, Sun, Moon } from 'lucide-react';
 const NODES = ['India Node', 'Brazil Node', 'China Node', 'South Africa Node'];
 const ROLES = ['Admin Officer', 'Regional Inspector', 'Citizen'];
 
-export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
-  const [node, setNode] = useState('India Node');
+export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode, setActiveNode }) {
   const [role, setRole] = useState('Admin Officer');
   
   // Single state to manage which dropdown is open (prevents overlapping)
@@ -115,7 +114,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
             style={{ background: inputBg, border: `1px solid ${border}`, color: text }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-            {node}
+            {activeNode}
             <ChevronDown className={`w-3 h-3 transition-transform ${activeDropdown === 'node' ? 'rotate-180' : ''}`} style={{ color: muted }} />
           </button>
           {activeDropdown === 'node' && (
@@ -126,11 +125,11 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
               {NODES.map(n => (
                 <button
                   key={n}
-                  onClick={() => { setNode(n); setActiveDropdown(null); }}
+                  onClick={() => { setActiveNode(n); setActiveDropdown(null); }}
                   className="w-full text-left px-3 py-2 text-sm transition"
                   style={{
-                    color: node === n ? '#2563eb' : text,
-                    fontWeight: node === n ? 600 : 400,
+                    color: activeNode === n ? '#2563eb' : text,
+                    fontWeight: activeNode === n ? 600 : 400,
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
