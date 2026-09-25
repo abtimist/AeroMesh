@@ -21,7 +21,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
 
   return (
     <header
-      className="flex items-center justify-between px-4 shrink-0 z-50"
+      className="flex items-center justify-between px-4 shrink-0 z-[1000]"
       style={{
         height: 'var(--topbar-height)',
         background: surface,
@@ -30,9 +30,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
     >
       {/* ── Logo ── */}
       <div className="flex items-center gap-2.5 shrink-0" style={{ width: 'var(--sidebar-width)' }}>
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-sm select-none shadow-sm">
-          A
-        </div>
+        <img src="/icon.png" alt="AeroMesh Icon" className="w-8 h-8 object-contain" />
         <span className="font-semibold text-sm tracking-tight hidden lg:block" style={{ color: text }}>
           AeroMesh
         </span>
