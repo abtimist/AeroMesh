@@ -1,10 +1,24 @@
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form, Depends, HTTPException
+from sqlalchemy.orm import Session
 from app.services.openaq_client import OpenAQClient
 from app.services.meteo_client import OpenMeteoClient
 from app.services.firms_client import NASA_FIRMSClient
+from app.db.session import SessionLocal
+from app.models.report import CitizenReport
 import asyncio
+import shutil
+import os
+import uuid
 
 router = APIRouter()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 @router.post("/openaq")
 async def trigger_openaq_sync(background_tasks: BackgroundTasks):
@@ -42,4 +56,49 @@ async def trigger_firms_sync(background_tasks: BackgroundTasks, bbox: str = "70,
         
     background_tasks.add_task(sync_task)
     return {"status": "success", "message": f"NASA FIRMS sync triggered for bbox {bbox}"}
+
+@router.post("/report")
+async def submit_citizen_report(
+    lat: float = Form(...),
+    lon: float = Form(...),
+    device_id: str = Form("anonymous"),
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Accepts a citizen photo report with GPS coordinates.
+    Saves the image and creates a CitizenReport in PostGIS.
+    """
+    try:
+        # Save photo locally (simulating S3 upload)
+        upload_dir = "uploads/reports"
+        os.makedirs(upload_dir, exist_ok=True)
+        ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(upload_dir, filename)
+        
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(photo.file, buffer)
+            
+        # Create PostGIS geometry point: POINT(lon lat)
+        point = f"SRID=4326;POINT({lon} {lat})"
+        
+        # Save to DB
+        report = CitizenReport(
+            device_id=device_id,
+            location=point,
+            image_url=filepath
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        
+        return {
+            "status": "success", 
+            "message": "Report submitted successfully",
+            "report_id": report.id
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 

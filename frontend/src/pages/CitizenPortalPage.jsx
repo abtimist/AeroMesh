@@ -2,7 +2,8 @@
 // Layout: alert banner → AQI gauge → Report button → weather mini-cards → bottom tab bar
 // Following the approved mobile mockup exactly
 
-import { Camera, Map, Bell, Home, Wind, Layers } from 'lucide-react';
+import { Camera, Map, Bell, Home, Wind, Layers, Loader2, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import AQIGauge from '../components/AQIGauge';
 
@@ -42,6 +43,55 @@ export default function CitizenPortalPage() {
   const bannerBg = AQI_BANNER_COLORS[level];
   const advice = LEVEL_ADVICE[level].replace('{pm25}', pm25);
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError('');
+
+    try {
+      // 1. Get GPS coordinates
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      }).catch(() => {
+        // Fallback mock coordinates if user denies or it fails (Indo-Gangetic plain)
+        return { coords: { latitude: 28.522, longitude: 77.275 } };
+      });
+
+      const { latitude, longitude } = pos.coords;
+
+      // 2. Prepare multipart form data
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('lat', latitude);
+      formData.append('lon', longitude);
+      formData.append('device_id', 'citizen-app-' + Math.floor(Math.random() * 1000));
+
+      // 3. Send to backend
+      const res = await fetch('http://localhost:8000/api/ingestion/report', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+      
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 4000);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to upload report. Please try again.');
+    } finally {
+      setUploading(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 max-w-md mx-auto overflow-hidden">
       {/* ── App header ── */}
@@ -66,16 +116,34 @@ export default function CitizenPortalPage() {
         </div>
 
         {/* Report Button — full-width, massive, impossible to miss */}
-        <div className="px-4 mt-4">
+        <div className="px-4 mt-4 relative">
+          {error && <p className="text-red-500 text-xs text-center mb-2">{error}</p>}
+          
           <label
             htmlFor="citizen-photo-upload"
-            className="flex flex-col items-center justify-center gap-1 w-full h-14 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-2xl font-semibold text-base cursor-pointer transition shadow-md shadow-blue-600/30 select-none"
+            className={`flex flex-col items-center justify-center gap-1 w-full h-14 text-white rounded-2xl font-semibold text-base cursor-pointer transition shadow-md select-none ${
+              uploadSuccess ? 'bg-green-500 shadow-green-500/30' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/30'
+            } ${uploading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
-            <div className="flex items-center gap-2">
-              <Camera className="w-5 h-5" />
-              Report Smoke / Fire
-            </div>
-            <span className="text-xs font-normal opacity-75">Upload a geotagged photo</span>
+            {uploading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </div>
+            ) : uploadSuccess ? (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5" />
+                Report Sent!
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5" />
+                  Report Smoke / Fire
+                </div>
+                <span className="text-xs font-normal opacity-75">Upload a geotagged photo</span>
+              </>
+            )}
           </label>
           <input
             id="citizen-photo-upload"
@@ -83,6 +151,8 @@ export default function CitizenPortalPage() {
             accept="image/*"
             capture="environment"
             className="hidden"
+            onChange={handlePhotoUpload}
+            disabled={uploading || uploadSuccess}
           />
         </div>
 
