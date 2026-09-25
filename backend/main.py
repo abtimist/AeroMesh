@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api.endpoints import ingestion, analysis, laya
+from app.api.endpoints import ingestion, analysis, laya, data
 from app.core.scheduler import start_scheduler
 from app.db.session import engine
 from app.db.base_class import Base
@@ -38,6 +38,7 @@ app.add_middleware(
 app.include_router(ingestion.router, prefix="/api/ingestion", tags=["Ingestion"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["Geospatial Analysis"])
 app.include_router(laya.router, prefix="/api/laya", tags=["Laya CV Engine"])
+app.include_router(data.router, prefix="/api/data", tags=["Map Data"])
 
 @app.get("/")
 def read_root():

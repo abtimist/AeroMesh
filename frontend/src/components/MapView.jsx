@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import KPIStrip from './KPIStrip';
@@ -12,7 +12,7 @@ const AQI_COLORS = {
   UNHEALTHY: '#ff0000', VERY_UNHEALTHY: '#8f3f97', HAZARDOUS: '#7e0023',
 };
 
-// Realistic mock sensor data for Delhi NCR and surrounding Indo-Gangetic Plain
+// Realistic mock sensor data fallback
 const MOCK_SENSORS = [
   { id: 1, lat: 28.522, lon: 77.275, pm25: 452, aqiLevel: 'HAZARDOUS',      location: 'Delhi (Okhla Phase 2)' },
   { id: 2, lat: 28.554, lon: 77.300, pm25: 395, aqiLevel: 'HAZARDOUS',      location: 'Noida (Sec 125)' },
@@ -24,24 +24,18 @@ const MOCK_SENSORS = [
   { id: 8, lat: 28.800, lon: 77.300, pm25: 145, aqiLevel: 'UNHEALTHY',      location: 'Delhi (Narela)' },
 ];
 
-// Mock plume polygon (Okhla Industrial Area drifting SE towards Noida)
 const MOCK_PLUME = {
   type: 'Feature',
   properties: { severity: 'CRITICAL', event_id: 9942 },
   geometry: {
     type: 'Polygon',
     coordinates: [[
-      [77.275, 28.522], // Okhla (Source)
-      [77.320, 28.550], // Expanding SE
-      [77.400, 28.510],
-      [77.350, 28.450],
-      [77.260, 28.490],
-      [77.275, 28.522], // Back to Okhla
+      [77.275, 28.522], [77.320, 28.550], [77.400, 28.510],
+      [77.350, 28.450], [77.260, 28.490], [77.275, 28.522],
     ]],
   },
 };
 
-// Mock fire hotspot (Stubble burning in Haryana)
 const MOCK_FIRE = { lat: 29.390, lon: 76.970 };
 
 export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
@@ -50,6 +44,48 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
   });
   
   const { dark } = useTheme();
+
+  // State for fetched data
+  const [sensors, setSensors] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [sensorRes, eventRes] = await Promise.all([
+          fetch('http://localhost:8000/api/data/sensors').catch(() => null),
+          fetch('http://localhost:8000/api/data/events').catch(() => null)
+        ]);
+
+        let fetchedSensors = [];
+        let fetchedEvents = [];
+
+        if (sensorRes && sensorRes.ok) fetchedSensors = await sensorRes.json();
+        if (eventRes && eventRes.ok) fetchedEvents = await eventRes.json();
+
+        // Fallback to mock data if DB is empty or API is down (for demo purposes)
+        if (fetchedSensors.length === 0) {
+          setSensors(MOCK_SENSORS);
+        } else {
+          setSensors(fetchedSensors);
+        }
+
+        if (fetchedEvents.length === 0) {
+          setEvents([{ type: 'mock_fire', lat: MOCK_FIRE.lat, lon: MOCK_FIRE.lon }]);
+        } else {
+          setEvents(fetchedEvents);
+        }
+      } catch (err) {
+        console.error("Failed to fetch map data", err);
+        setSensors(MOCK_SENSORS);
+        setEvents([{ type: 'mock_fire', lat: MOCK_FIRE.lat, lon: MOCK_FIRE.lon }]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -68,9 +104,8 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
 
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {/* Full-bleed map */}
       <MapContainer
-        center={[28.6139, 77.209]} // New Delhi center
+        center={[28.6139, 77.209]}
         zoom={10}
         scrollWheelZoom
         zoomControl={false}
@@ -82,8 +117,8 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
           attribution='Esri, HERE, Garmin, FAO, NOAA, USGS, EPA'
         />
 
-        {/* AQI sensor markers */}
-        {layers.sensors && MOCK_SENSORS.map(s => (
+        {/* Real or Mock Sensors */}
+        {layers.sensors && sensors.map(s => (
           <CircleMarker
             key={s.id}
             center={[s.lat, s.lon]}
@@ -96,44 +131,59 @@ export default function MapView({ alertPanelOpen, onAlertPanelClose }) {
             }}
           >
             <Popup>
-              <div className="text-sm font-medium">{s.location}</div>
+              <div className="text-sm font-medium">{s.location || s.name}</div>
               <div className="text-xs text-slate-500">PM2.5: {s.pm25} µg/m³</div>
             </Popup>
           </CircleMarker>
         ))}
 
-        {/* Plume polygon */}
-        {layers.plumes && (
-          <GeoJSON data={MOCK_PLUME} style={plumeStyle} />
-        )}
+        {/* Real or Mock Plumes & Fires */}
+        {events.map((e, idx) => {
+          if (e.type === 'mock_fire') {
+            return (
+              <div key="mock-event">
+                {layers.fire && (
+                  <CircleMarker
+                    center={[e.lat, e.lon]}
+                    radius={12}
+                    pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
+                  >
+                    <Popup>
+                      <div className="text-sm font-medium">🔥 Active Fire Hotspot (Stubble)</div>
+                      <div className="text-xs text-slate-500">NASA FIRMS (VIIRS) · Confidence: 88%</div>
+                    </Popup>
+                  </CircleMarker>
+                )}
+                {layers.plumes && <GeoJSON data={MOCK_PLUME} style={plumeStyle} />}
+              </div>
+            );
+          }
 
-        {/* Fire hotspot */}
-        {layers.fire && (
-          <CircleMarker
-            center={[MOCK_FIRE.lat, MOCK_FIRE.lon]}
-            radius={12}
-            pathOptions={{
-              fillColor: '#ff4500',
-              fillOpacity: 0.9,
-              color: dark ? '#131920' : '#ffffff',
-              weight: 2,
-            }}
-          >
-            <Popup>
-              <div className="text-sm font-medium">🔥 Active Fire Hotspot (Stubble)</div>
-              <div className="text-xs text-slate-500">NASA FIRMS (VIIRS) · Confidence: 88%</div>
-            </Popup>
-          </CircleMarker>
-        )}
+          // Real Event rendering
+          return (
+            <div key={e.id}>
+              {layers.fire && (
+                <CircleMarker
+                  center={[e.lat, e.lon]}
+                  radius={12}
+                  pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
+                >
+                  <Popup>
+                    <div className="text-sm font-medium">🚨 Event #{e.id}</div>
+                    <div className="text-xs text-slate-500">Type: {e.event_type} · Severity: {e.severity}</div>
+                  </Popup>
+                </CircleMarker>
+              )}
+              {layers.plumes && e.plume_polygon && (
+                <GeoJSON data={e.plume_polygon} style={plumeStyle} />
+              )}
+            </div>
+          );
+        })}
       </MapContainer>
 
-      {/* Floating layer control (top-right) */}
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
-
-      {/* Floating KPI strip (bottom-center, absolute inside map) */}
       <KPIStrip />
-
-      {/* Slide-in alert panel (right edge) */}
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} />
     </div>
   );

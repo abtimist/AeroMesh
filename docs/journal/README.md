@@ -15,6 +15,7 @@ Welcome to the **AeroMesh Build Journal**! This directory contains detailed step
 | [`05-DAY2-SATELLITES-AND-INDEXING.md`](./05-DAY2-SATELLITES-AND-INDEXING.md) | Sept 25, 2026 | Satellites & Spatial Indexing | NASA FIRMS API, PostGIS `ST_DistanceSphere`, GeoJSON overlays, Mock Sentinel-5P |
 | [`06-DAY3-LAYA-ENGINE.md`](./06-DAY3-LAYA-ENGINE.md) | Sept 25, 2026 | Laya Local Engine & CV Model | PyTorch MobileNetV3 inference, Data Fusion Matrix, Image classification |
 | [`07-DAY4-PLUME-AND-CANVAS.md`](./07-DAY4-PLUME-AND-CANVAS.md) | Sept 25, 2026 | Gaussian Plume & Canvas Maps | Math Dispersion Polygons, React Leaflet Integration, HTML5 Canvas Vector Particles |
+| [`08-DAY5-UI-UX-REBUILD.md`](./08-DAY5-UI-UX-REBUILD.md) | Sept 26, 2026 | UI/UX Rebuild & Alignment | Desktop vs Mobile routing separation, CSS Variables for Dark Mode, Leaflet z-index |
 
 ---
 
