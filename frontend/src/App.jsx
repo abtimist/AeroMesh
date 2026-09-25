@@ -6,43 +6,37 @@ import './App.css'
 // Day 5 will build out the full Command Center and Citizen Portal.
 
 import MapComponent from './components/MapComponent'
+import Sidebar from './components/Sidebar'
+import AlertsPanel from './components/AlertsPanel'
 
 function DashboardPage() {
   return (
-    <div className="flex flex-col h-full min-h-screen bg-slate-50 p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 mb-2">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-medium text-blue-700">System Online</span>
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">AeroMesh Command Center</h1>
-          <p className="text-sm text-slate-500">Real-time fusion of ground sensors, satellites, and citizen reports.</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold text-red-600 uppercase tracking-widest">Active Alerts: 3</p>
-          <a href="/report" className="text-xs text-blue-600 hover:underline">Go to Mobile Portal →</a>
-        </div>
-      </div>
+    <div className="flex h-screen w-full bg-slate-950 overflow-hidden font-sans">
+      <Sidebar />
+      <AlertsPanel />
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <MapComponent />
-        </div>
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Latest Plume Forecasts</h3>
-          <div className="space-y-4">
-            <div className="p-3 border border-red-200 bg-red-50 rounded-lg">
-              <div className="flex justify-between">
-                <span className="text-xs font-bold text-red-700">#CRITICAL</span>
-                <span className="text-xs text-slate-500">2 min ago</span>
-              </div>
-              <p className="text-sm font-medium text-slate-800 mt-1">Biomass Burning, Delhi</p>
-              <p className="text-xs text-slate-600 mt-1">PBLH: 1200m | Wind: 5m/s ESE</p>
+      {/* Main Map Area */}
+      <main className="flex-1 relative h-full flex flex-col">
+        {/* Top Header Overlay */}
+        <header className="absolute top-0 left-0 w-full p-6 z-[1000] pointer-events-none flex justify-between items-start">
+          <div className="pointer-events-auto bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 shadow-2xl">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Global Threat Map</h1>
+            <p className="text-sm text-slate-400">Live fusion of NASA FIRMS, OpenAQ & Citizen CV</p>
+          </div>
+          
+          <div className="pointer-events-auto flex items-center gap-3">
+            <div className="px-4 py-2 bg-indigo-500/20 border border-indigo-500/50 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-500/20 backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+              <span className="text-xs font-bold text-indigo-300">Laya AI Engine: ACTIVE</span>
             </div>
           </div>
+        </header>
+
+        {/* The Map spans the entire remaining area */}
+        <div className="w-full h-full">
+          <MapComponent />
         </div>
-      </div>
+      </main>
     </div>
   )
 }

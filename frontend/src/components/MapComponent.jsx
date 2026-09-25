@@ -108,7 +108,7 @@ export default function MapComponent() {
   }, []);
 
   return (
-    <div className="w-full h-[600px] rounded-xl overflow-hidden shadow-lg border border-slate-200 relative">
+    <div className="w-full h-full relative bg-slate-900">
       <MapContainer 
         center={[28.6139, 77.2090]} // Centered on New Delhi
         zoom={6} 
