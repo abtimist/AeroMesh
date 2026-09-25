@@ -1,7 +1,7 @@
 // Topbar — desktop command center header
 // Has dark/light mode toggle, node switcher, role switcher, notifications, user profile
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Bell, ChevronDown, Search, Sun, Moon } from 'lucide-react';
 
 const NODES = ['India Node', 'Brazil Node', 'China Node', 'South Africa Node'];
@@ -9,9 +9,26 @@ const ROLES = ['Admin Officer', 'Regional Inspector', 'Citizen'];
 
 export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
   const [node, setNode] = useState('India Node');
-  const [nodeOpen, setNodeOpen] = useState(false);
   const [role, setRole] = useState('Admin Officer');
-  const [roleOpen, setRoleOpen] = useState(false);
+  
+  // Single state to manage which dropdown is open (prevents overlapping)
+  const [activeDropdown, setActiveDropdown] = useState(null); 
+  const topbarRef = useRef(null);
+
+  // Close dropdowns if clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (topbarRef.current && !topbarRef.current.contains(event.target)) {
+        setActiveDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleDropdown = (menuName) => {
+    setActiveDropdown(prev => prev === menuName ? null : menuName);
+  };
 
   const surface = 'var(--color-topbar-bg)';
   const border  = 'var(--color-border)';
@@ -21,6 +38,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
 
   return (
     <header
+      ref={topbarRef}
       className="flex items-center justify-between px-4 shrink-0 z-[1000]"
       style={{
         height: 'var(--topbar-height)',
@@ -59,15 +77,15 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
         {/* Role switcher — for hackathon judges */}
         <div className="relative hidden lg:block">
           <button
-            onClick={() => setRoleOpen(v => !v)}
+            onClick={() => toggleDropdown('role')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
             style={{ background: inputBg, border: `1px solid ${border}`, color: muted }}
           >
             <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
             {role}
-            <ChevronDown className="w-3 h-3" style={{ color: muted }} />
+            <ChevronDown className={`w-3 h-3 transition-transform ${activeDropdown === 'role' ? 'rotate-180' : ''}`} style={{ color: muted }} />
           </button>
-          {roleOpen && (
+          {activeDropdown === 'role' && (
             <div
               className="absolute right-0 top-full mt-1 w-48 rounded-xl shadow-xl py-1 z-50 border"
               style={{ background: surface, borderColor: border }}
@@ -78,8 +96,8 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
               {ROLES.map(r => (
                 <button
                   key={r}
-                  onClick={() => { setRole(r); setRoleOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm transition hover:bg-blue-50"
+                  onClick={() => { setRole(r); setActiveDropdown(null); }}
+                  className="w-full text-left px-3 py-2 text-sm transition hover:bg-blue-50 dark:hover:bg-blue-900/30"
                   style={{ color: role === r ? '#2563eb' : text, fontWeight: role === r ? 600 : 400 }}
                 >
                   {r}
@@ -92,15 +110,15 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
         {/* Node switcher */}
         <div className="relative">
           <button
-            onClick={() => setNodeOpen(v => !v)}
+            onClick={() => toggleDropdown('node')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
             style={{ background: inputBg, border: `1px solid ${border}`, color: text }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
             {node}
-            <ChevronDown className="w-3 h-3" style={{ color: muted }} />
+            <ChevronDown className={`w-3 h-3 transition-transform ${activeDropdown === 'node' ? 'rotate-180' : ''}`} style={{ color: muted }} />
           </button>
-          {nodeOpen && (
+          {activeDropdown === 'node' && (
             <div
               className="absolute right-0 top-full mt-1 w-52 rounded-xl shadow-xl py-1 z-50 border"
               style={{ background: surface, borderColor: border }}
@@ -108,7 +126,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
               {NODES.map(n => (
                 <button
                   key={n}
-                  onClick={() => { setNode(n); setNodeOpen(false); }}
+                  onClick={() => { setNode(n); setActiveDropdown(null); }}
                   className="w-full text-left px-3 py-2 text-sm transition"
                   style={{
                     color: node === n ? '#2563eb' : text,
@@ -137,18 +155,33 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark }) {
         </button>
 
         {/* Notification bell */}
-        <button
-          className="relative p-2 rounded-lg transition"
-          style={{ color: muted }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <Bell className="w-5 h-5" />
-          {alertCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2"
-              style={{ '--tw-ring-color': surface }} />
+        <div className="relative">
+          <button
+            onClick={() => toggleDropdown('notifications')}
+            className="relative p-2 rounded-lg transition"
+            style={{ color: muted, background: activeDropdown === 'notifications' ? 'var(--color-surface-hover)' : 'transparent' }}
+            onMouseEnter={e => { if (activeDropdown !== 'notifications') e.currentTarget.style.background = 'var(--color-surface-hover)'; }}
+            onMouseLeave={e => { if (activeDropdown !== 'notifications') e.currentTarget.style.background = 'transparent'; }}
+          >
+            <Bell className="w-5 h-5" />
+            {alertCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2"
+                style={{ '--tw-ring-color': surface }} />
+            )}
+          </button>
+          
+          {activeDropdown === 'notifications' && (
+             <div
+             className="absolute right-0 top-full mt-1 w-64 rounded-xl shadow-xl py-2 z-50 border"
+             style={{ background: surface, borderColor: border }}
+           >
+             <p className="px-3 py-1 text-xs font-semibold" style={{ color: text }}>Notifications</p>
+             <div className="px-3 py-2 text-sm border-t mt-1" style={{ borderColor: border, color: muted }}>
+               You have {alertCount} new alerts.
+             </div>
+           </div>
           )}
-        </button>
+        </div>
 
         {/* User avatar */}
         <button

@@ -10,7 +10,7 @@ export default function KPIStrip({ stats }) {
   } = stats || {};
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[500] flex gap-3 pointer-events-auto">
+    <div className="absolute top-4 left-4 z-[500] flex flex-col sm:flex-row gap-3 pointer-events-auto">
       <StatCard
         icon={AlertTriangle}
         label="Active Events"
