@@ -4,6 +4,7 @@
    AeroMesh Design System — Global CSS
    Design Reference: DESIGN_SYSTEM.md (approved)
    Philosophy: Map-First, EPA-Standard Colors, Calm Clarity
+   Supports: Light mode (default) + Dark mode (html.dark)
    ============================================================ */
 
 @layer base {
@@ -17,12 +18,13 @@
 
   body {
     margin: 0;
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: var(--color-page-bg);
+    color: var(--color-text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 14px;
     line-height: 1.6;
-    overflow: hidden; /* prevent page scroll — map handles its own scroll */
+    overflow: hidden;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   #root {
@@ -33,13 +35,13 @@
 }
 
 /* ============================================================
-   CSS Design Tokens
+   Light Mode Tokens (default)
    ============================================================ */
 :root {
-  /* Interface palette */
   --color-page-bg:        #f8fafc;
   --color-surface:        #ffffff;
   --color-surface-hover:  #f1f5f9;
+  --color-surface-2:      #f8fafc;
   --color-primary:        #2563eb;
   --color-primary-tint:   #eff6ff;
   --color-border:         #e2e8f0;
@@ -47,8 +49,14 @@
   --color-text-primary:   #0f172a;
   --color-text-secondary: #64748b;
   --color-text-disabled:  #94a3b8;
+  --color-topbar-bg:      #ffffff;
+  --color-sidebar-bg:     #ffffff;
+  --color-card-bg:        #ffffff;
+  --color-panel-bg:       #ffffff;
+  --color-input-bg:       #f8fafc;
+  --color-shadow:         rgba(0,0,0,0.08);
 
-  /* AQI Data Palette — use ONLY for air quality data elements */
+  /* AQI Data Palette */
   --aqi-good:             #00e400;
   --aqi-moderate:         #ffff00;
   --aqi-usg:              #ff7e00;
@@ -56,31 +64,53 @@
   --aqi-very-unhealthy:   #8f3f97;
   --aqi-hazardous:        #7e0023;
 
-  /* Map overlay colors */
-  --map-plume-fill:       rgba(255, 0, 0, 0.35);
-  --map-plume-stroke:     rgba(255, 0, 0, 0.7);
+  /* Map overlays */
+  --map-plume-fill:       rgba(255,0,0,0.35);
+  --map-plume-stroke:     rgba(255,0,0,0.7);
   --map-fire-marker:      #ff4500;
   --map-wind-arrow:       #60a5fa;
   --map-corridor:         #f59e0b;
 
-  /* Layout dimensions */
+  /* Layout */
   --sidebar-width:        72px;
   --topbar-height:        56px;
   --panel-width:          360px;
-
-  /* Transitions */
   --transition-base:      150ms ease;
-  --transition-panel:     280ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-panel:     280ms cubic-bezier(0.4,0,0.2,1);
+  --transition-theme:     200ms ease;
 }
 
 /* ============================================================
-   Leaflet — ensure map fills container and tiles render correctly
+   Dark Mode Tokens (html.dark)
+   ============================================================ */
+html.dark {
+  --color-page-bg:        #0c1017;
+  --color-surface:        #131920;
+  --color-surface-hover:  #1e2530;
+  --color-surface-2:      #1a2130;
+  --color-primary:        #3b82f6;
+  --color-primary-tint:   #1e3a5f;
+  --color-border:         #1e2d3d;
+  --color-border-strong:  #2d3f50;
+  --color-text-primary:   #e8f0fe;
+  --color-text-secondary: #8eaabe;
+  --color-text-disabled:  #4a6070;
+  --color-topbar-bg:      #0e1520;
+  --color-sidebar-bg:     #0e1520;
+  --color-card-bg:        #131920;
+  --color-panel-bg:       #0e1520;
+  --color-input-bg:       #1a2130;
+  --color-shadow:         rgba(0,0,0,0.4);
+}
+
+/* ============================================================
+   Leaflet — ensure map fills container
    ============================================================ */
 .leaflet-container {
   width: 100%;
   height: 100%;
   font-family: 'Inter', system-ui, sans-serif;
-  background: #1a1f2e;
+  background: #0d1117;
 }
 
 .leaflet-control-container .leaflet-top,
@@ -88,36 +118,78 @@
   z-index: 400;
 }
 
+/* Hide default Leaflet attribution (we add our own) */
+.leaflet-control-attribution {
+  display: none;
+}
+
 /* ============================================================
-   Sidebar nav item tooltip
+   Sidebar tooltip
    ============================================================ */
 .sidebar-tooltip {
   pointer-events: none;
   position: absolute;
-  left: calc(var(--sidebar-width) + 8px);
+  left: calc(var(--sidebar-width) + 10px);
   top: 50%;
   transform: translateY(-50%);
-  background: #0f172a;
-  color: #f8fafc;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 10px;
+  background: var(--color-text-primary);
+  color: var(--color-page-bg);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
   border-radius: 6px;
   white-space: nowrap;
   opacity: 0;
   transition: opacity var(--transition-base);
   z-index: 9999;
+  box-shadow: 0 4px 12px var(--color-shadow);
+}
+.sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-right: 4px solid var(--color-text-primary);
 }
 .sidebar-nav-item:hover .sidebar-tooltip {
   opacity: 1;
 }
 
 /* ============================================================
-   AQI Badge color utilities (used via data-aqi attribute)
+   AQI Badge color utilities (data-aqi attribute)
    ============================================================ */
 [data-aqi="GOOD"]           { background-color: #dcfce7; color: #166534; }
 [data-aqi="MODERATE"]       { background-color: #fefce8; color: #854d0e; }
 [data-aqi="USG"]            { background-color: #fff7ed; color: #9a3412; }
 [data-aqi="UNHEALTHY"]      { background-color: #fee2e2; color: #991b1b; }
 [data-aqi="VERY_UNHEALTHY"] { background-color: #f3e8ff; color: #6b21a8; }
-[data-aqi="HAZARDOUS"]      { background-color: #ffe4e6; color: #7e0023; }
+[data-aqi="HAZARDOUS"]      { background-color: #4a0020; color: #fca5a5; }
+
+html.dark [data-aqi="GOOD"]           { background-color: #064e1e; color: #86efac; }
+html.dark [data-aqi="MODERATE"]       { background-color: #422006; color: #fcd34d; }
+html.dark [data-aqi="USG"]            { background-color: #431407; color: #fdba74; }
+html.dark [data-aqi="UNHEALTHY"]      { background-color: #450a0a; color: #fca5a5; }
+html.dark [data-aqi="VERY_UNHEALTHY"] { background-color: #2e1065; color: #d8b4fe; }
+html.dark [data-aqi="HAZARDOUS"]      { background-color: #3b0010; color: #fda4af; }
+
+/* ============================================================
+   Alert panel slide-in (CSS transition on inline style)
+   ============================================================ */
+.alert-panel {
+  transition: transform var(--transition-panel);
+}
+
+/* ============================================================
+   Scrollbar styling
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-disabled); }

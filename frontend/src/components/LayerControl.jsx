@@ -1,6 +1,3 @@
-// LayerControl — floating map layer toggles (top-right of map)
-// Toggles: Sensors, Plumes, Fire Hotspots, Wind Vectors, Corridors
-
 import { useState } from 'react';
 import { Layers } from 'lucide-react';
 
@@ -17,12 +14,20 @@ export default function LayerControl({ activeLayers, onToggle }) {
 
   return (
     <div className="absolute top-4 right-4 z-[500]">
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-slate-200 overflow-hidden">
+      <div
+        className="rounded-xl shadow-md overflow-hidden transition-colors"
+        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+      >
         {/* Toggle button */}
         <button
           onClick={() => setOpen(v => !v)}
-          className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium transition w-full
-            ${open ? 'text-blue-600 bg-blue-50' : 'text-slate-700 hover:bg-slate-50'}`}
+          className="flex items-center gap-2 px-3 py-2.5 text-xs font-medium transition w-full"
+          style={{
+            color: open ? 'var(--color-primary)' : 'var(--color-text-primary)',
+            background: open ? 'var(--color-primary-tint)' : 'transparent',
+          }}
+          onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--color-surface-hover)'; }}
+          onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}
         >
           <Layers className="w-4 h-4" />
           Layers
@@ -30,15 +35,20 @@ export default function LayerControl({ activeLayers, onToggle }) {
 
         {/* Layer toggles */}
         {open && (
-          <div className="border-t border-slate-100 p-2 space-y-1">
+          <div className="p-2 space-y-1" style={{ borderTop: '1px solid var(--color-border)' }}>
             {LAYERS.map(({ key, label, color }) => {
               const active = activeLayers?.[key] !== false; // default on
               return (
                 <button
                   key={key}
                   onClick={() => onToggle(key)}
-                  className={`flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg text-xs font-medium transition
-                    ${active ? 'bg-slate-50 text-slate-700' : 'text-slate-400 hover:bg-slate-50'}`}
+                  className="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg text-xs font-medium transition"
+                  style={{
+                    color: active ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+                    background: active ? 'var(--color-surface-hover)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--color-surface-hover)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0 border-2"
@@ -48,7 +58,7 @@ export default function LayerControl({ activeLayers, onToggle }) {
                     }}
                   />
                   {label}
-                  <span className={`ml-auto text-[9px] font-bold ${active ? 'text-blue-600' : 'text-slate-300'}`}>
+                  <span className="ml-auto text-[9px] font-bold" style={{ color: active ? 'var(--color-primary)' : 'var(--color-text-disabled)' }}>
                     {active ? 'ON' : 'OFF'}
                   </span>
                 </button>

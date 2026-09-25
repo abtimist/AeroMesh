@@ -1,14 +1,14 @@
-// DashboardLayout — the permanent page frame
-// Topbar (full width, 56px) + Sidebar (72px left) + {children} fills rest
-
 import Topbar from '../components/Topbar';
 import Sidebar from '../components/Sidebar';
+import { useTheme } from '../hooks';
 
 export default function DashboardLayout({ children, alertCount }) {
+  const { dark, toggle } = useTheme();
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+    <div className="flex flex-col h-screen overflow-hidden transition-colors" style={{ background: 'var(--color-page-bg)' }}>
       {/* Topbar spans full width */}
-      <Topbar alertCount={alertCount} />
+      <Topbar alertCount={alertCount} dark={dark} onToggleDark={toggle} />
 
       {/* Below topbar: sidebar + main content */}
       <div className="flex flex-1 overflow-hidden">

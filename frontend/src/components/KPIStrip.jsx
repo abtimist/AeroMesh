@@ -1,15 +1,12 @@
-// KPIStrip — 4 floating stat cards anchored to bottom-center of the map
-// Uses absolute positioning to float INSIDE the map (doesn't push map up)
-
 import StatCard from './StatCard';
-import { AlertTriangle, Wind, Wifi, Activity } from 'lucide-react';
+import { AlertTriangle, Wind, MonitorDot, Factory } from 'lucide-react';
 
 export default function KPIStrip({ stats }) {
   const {
-    activeEvents = 7,
-    pm25Peak = 342,
-    wind = '18 km/h SE',
-    stationsOnline = 124,
+    activeEvents = 4,
+    pm25Peak = 452,
+    wind = '12 km/h NW',
+    stationsOnline = 142,
   } = stats || {};
 
   return (
@@ -18,29 +15,29 @@ export default function KPIStrip({ stats }) {
         icon={AlertTriangle}
         label="Active Events"
         value={activeEvents}
-        trend="3 this hour"
+        trend="2 this hour"
         trendUp
         iconColor="text-red-400"
       />
       <StatCard
-        icon={Activity}
-        label="PM2.5 Peak"
+        icon={Factory}
+        label="PM2.5 Peak (Okhla)"
         value={`${pm25Peak} µg/m³`}
-        trend="↑ from 298"
+        trend="↑ from 380"
         trendUp
         iconColor="text-orange-400"
       />
       <StatCard
         icon={Wind}
-        label="Wind"
+        label="Prevailing Wind"
         value={wind}
         iconColor="text-blue-400"
       />
       <StatCard
-        icon={Wifi}
-        label="Stations Online"
+        icon={MonitorDot}
+        label="Sensors Online"
         value={stationsOnline}
-        trend="2 offline"
+        trend="3 offline"
         trendUp={false}
         iconColor="text-green-500"
       />
