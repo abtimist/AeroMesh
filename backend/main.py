@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api.endpoints import ingestion
+from app.api.endpoints import ingestion, analysis
 from app.core.scheduler import start_scheduler
 
 @asynccontextmanager
@@ -30,6 +30,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(ingestion.router, prefix="/api/ingestion", tags=["Ingestion"])
+app.include_router(analysis.router, prefix="/api/analysis", tags=["Geospatial Analysis"])
 
 @app.get("/")
 def read_root():

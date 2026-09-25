@@ -1,6 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks
 from app.services.openaq_client import OpenAQClient
 from app.services.meteo_client import OpenMeteoClient
+from app.services.firms_client import NASA_FIRMSClient
 import asyncio
 
 router = APIRouter()
@@ -29,3 +30,16 @@ async def trigger_meteo_sync(background_tasks: BackgroundTasks, lat: float = 28.
         
     background_tasks.add_task(sync_task)
     return {"status": "success", "message": f"Open-Meteo sync triggered for {lat}, {lon}"}
+
+@router.post("/firms")
+async def trigger_firms_sync(background_tasks: BackgroundTasks, bbox: str = "70,8,90,35", days: int = 1):
+    """
+    Manually trigger the NASA FIRMS active fire sync for a specific bounding box.
+    """
+    async def sync_task():
+        client = NASA_FIRMSClient()
+        await client.fetch_active_fires(bbox=bbox, days=days)
+        
+    background_tasks.add_task(sync_task)
+    return {"status": "success", "message": f"NASA FIRMS sync triggered for bbox {bbox}"}
+
