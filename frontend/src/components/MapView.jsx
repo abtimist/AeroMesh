@@ -38,31 +38,80 @@ const MOCK_PLUME = {
 
 const MOCK_FIRE = { lat: 29.390, lon: 76.970 };
 
+// Mock Corridors (Economic / Industrial Zones)
+const MOCK_CORRIDORS = {
+  india: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "Delhi-Mumbai Industrial Corridor", type: "Economic Zone" },
+        geometry: { type: "LineString", coordinates: [[77.2, 28.6], [75.8, 26.9], [72.8, 19.0]] }
+      },
+      {
+        type: "Feature",
+        properties: { name: "Chennai-Bengaluru Corridor", type: "Economic Zone" },
+        geometry: { type: "LineString", coordinates: [[80.2, 13.0], [77.5, 12.9]] }
+      }
+    ]
+  },
+  brazil: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "São Paulo-Rio Corridor", type: "Economic Zone" },
+        geometry: { type: "LineString", coordinates: [[-46.6, -23.5], [-43.1, -22.9]] }
+      }
+    ]
+  },
+  china: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "Jing-Jin-Ji Corridor", type: "Economic Zone" },
+        geometry: { type: "LineString", coordinates: [[116.4, 39.9], [117.2, 39.1], [114.5, 38.0]] }
+      }
+    ]
+  },
+  sa: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "Gauteng Industrial Corridor", type: "Economic Zone" },
+        geometry: { type: "LineString", coordinates: [[28.0, -26.2], [28.2, -25.7]] }
+      }
+    ]
+  }
+};
+
 const NODE_CONFIG = {
-  'India Node': { center: [28.6139, 77.209], zoom: 10, sensors: MOCK_SENSORS, plume: MOCK_PLUME, fire: MOCK_FIRE },
+  'India Node': { center: [28.6139, 77.209], zoom: 6, sensors: MOCK_SENSORS, plume: MOCK_PLUME, fire: MOCK_FIRE, corridors: MOCK_CORRIDORS.india },
   'Brazil Node': { 
-    center: [-23.5505, -46.6333], zoom: 10, 
+    center: [-23.5505, -46.6333], zoom: 6, 
     sensors: [
       { id: 101, lat: -23.5505, lon: -46.6333, pm25: 145, aqiLevel: 'UNHEALTHY', location: 'São Paulo (Centro)' },
       { id: 102, lat: -23.58, lon: -46.68, pm25: 210, aqiLevel: 'VERY_UNHEALTHY', location: 'Pinheiros' }
     ],
-    plume: null, fire: { lat: -23.6, lon: -46.5 }
+    plume: null, fire: { lat: -23.6, lon: -46.5 }, corridors: MOCK_CORRIDORS.brazil
   },
   'China Node': {
-    center: [39.9042, 116.4074], zoom: 10,
+    center: [39.9042, 116.4074], zoom: 6,
     sensors: [
       { id: 201, lat: 39.9042, lon: 116.4074, pm25: 280, aqiLevel: 'VERY_UNHEALTHY', location: 'Beijing (Dongcheng)' },
       { id: 202, lat: 39.95, lon: 116.3, pm25: 190, aqiLevel: 'UNHEALTHY', location: 'Haidian' }
     ],
-    plume: null, fire: null
+    plume: null, fire: null, corridors: MOCK_CORRIDORS.china
   },
   'South Africa Node': {
-    center: [-26.2041, 28.0473], zoom: 10,
+    center: [-26.2041, 28.0473], zoom: 8,
     sensors: [
       { id: 301, lat: -26.2041, lon: 28.0473, pm25: 85, aqiLevel: 'MODERATE', location: 'Johannesburg (CBD)' },
       { id: 302, lat: -26.1, lon: 28.1, pm25: 110, aqiLevel: 'USG', location: 'Sandton' }
     ],
-    plume: null, fire: null
+    plume: null, fire: null, corridors: MOCK_CORRIDORS.sa
   }
 };
 
@@ -143,6 +192,22 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
 
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
+  const corridorStyle = {
+    color: '#3b82f6', // blue-500
+    weight: 4,
+    opacity: 0.6,
+    dashArray: '8 8',
+  };
+
+  const onEachCorridorFeature = (feature, layer) => {
+    if (feature.properties) {
+      layer.bindPopup(`
+        <div class="text-sm font-semibold">${feature.properties.name}</div>
+        <div class="text-xs text-slate-500">${feature.properties.type}</div>
+      `);
+    }
+  };
+
   const plumeStyle = {
     fillColor: '#ff0000',
     fillOpacity: 0.35,
@@ -184,6 +249,16 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           url={tileUrl}
           attribution='Esri, HERE, Garmin, FAO, NOAA, USGS, EPA'
         />
+
+        {/* Economic Corridors */}
+        {layers.corridors && currentConfig.corridors && (
+          <GeoJSON 
+            key={`corridor-${activeNode}`} // force re-render when node changes
+            data={currentConfig.corridors} 
+            style={corridorStyle} 
+            onEachFeature={onEachCorridorFeature}
+          />
+        )}
 
         {/* Real or Mock Sensors */}
         {layers.sensors && sensors.map(s => (
