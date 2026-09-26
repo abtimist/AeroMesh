@@ -74,34 +74,25 @@ BRICS_SENSORS = [
     {"id": "ru_chelyabinsk", "name": "Chelyabinsk",             "lat": 55.1644, "lon": 61.4368, "pm25": 68.0},
 ]
 
+from app.services.plume_model import GaussianPlumeModel
+
 # ============================================================
 # POLLUTION EVENTS — Active incidents with Gaussian plume polygons
 # ============================================================
+
 def make_plume_polygon(lat, lon, wind_dir_deg=135, distance_km=40):
-    """Generate a realistic plume cone polygon from source."""
-    R = 6371.0
-    travel_dir = (wind_dir_deg + 180) % 360
-    travel_rad = math.radians(travel_dir)
-    spread_half = math.radians(12)
-
-    def project(la, lo, dist, bearing):
-        la_r = math.radians(la)
-        lo_r = math.radians(lo)
-        new_la = math.asin(math.sin(la_r)*math.cos(dist/R) +
-                           math.cos(la_r)*math.sin(dist/R)*math.cos(bearing))
-        new_lo = lo_r + math.atan2(math.sin(bearing)*math.sin(dist/R)*math.cos(la_r),
-                                    math.cos(dist/R)-math.sin(la_r)*math.sin(new_la))
-        return [round(math.degrees(new_lo), 4), round(math.degrees(new_la), 4)]
-
-    left = project(lat, lon, distance_km, travel_rad - spread_half)
-    center = project(lat, lon, distance_km, travel_rad)
-    right = project(lat, lon, distance_km, travel_rad + spread_half)
-    mid_l = project(lat, lon, distance_km * 0.5, travel_rad - spread_half * 0.7)
-    mid_r = project(lat, lon, distance_km * 0.5, travel_rad + spread_half * 0.7)
-
+    """Generate a realistic plume cone polygon from source using the new physics model."""
+    # Assuming wind speed based on distance (hack for seeding)
+    wind_speed = distance_km / 10.0 
+    poly = GaussianPlumeModel.calculate_plume_polygon(
+        source_lat=lat, source_lon=lon,
+        wind_speed_ms=wind_speed, wind_dir_deg=wind_dir_deg,
+        pblh=1000.0, distance_km=distance_km
+    )
+    # Convert Shapely Polygon to GeoJSON dict
     return {
         "type": "Polygon",
-        "coordinates": [[[round(lon, 4), round(lat, 4)], mid_r, right, center, left, mid_l, [round(lon, 4), round(lat, 4)]]]
+        "coordinates": [list(poly.exterior.coords)]
     }
 
 EVENTS = [

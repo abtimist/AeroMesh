@@ -100,22 +100,36 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
 
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
 
-  // Dynamic KPI stats from real data
+  // Filter data based on active node (roughly 35 degrees radius)
+  const isPointInNode = (lat, lon) => {
+    if (!lat || !lon) return false;
+    const [centerLat, centerLon] = currentConfig.center;
+    // Handle wrap-around for longitude
+    let dLon = Math.abs(lon - centerLon);
+    if (dLon > 180) dLon = 360 - dLon;
+    const dist = Math.sqrt(Math.pow(lat - centerLat, 2) + Math.pow(dLon, 2));
+    return dist < 35;
+  };
+
+  const filteredSensors = useMemo(() => sensors.filter(s => isPointInNode(s.lat, s.lon)), [sensors, activeNode]);
+  const filteredEvents = useMemo(() => events.filter(e => isPointInNode(e.lat, e.lon)), [events, activeNode]);
+
+  // Dynamic KPI stats from real data for the active node
   const dynamicStats = useMemo(() => {
-    const peakSensor = sensors.length > 0
-      ? sensors.reduce((a, b) => ((a.pm25 || 0) > (b.pm25 || 0) ? a : b), sensors[0])
+    const peakSensor = filteredSensors.length > 0
+      ? filteredSensors.reduce((a, b) => ((a.pm25 || 0) > (b.pm25 || 0) ? a : b), filteredSensors[0])
       : null;
     return {
-      activeEvents: events.length,
+      activeEvents: filteredEvents.length,
       pm25Peak: peakSensor ? peakSensor.pm25 : 0,
       pm25Location: peakSensor ? peakSensor.name : '—',
-      stationsOnline: sensors.length,
+      stationsOnline: filteredSensors.length,
     };
-  }, [sensors, events]);
+  }, [filteredSensors, filteredEvents]);
 
   // Build GeoJSON features with properties so popups work
   const plumeFeatures = useMemo(() => {
-    return events
+    return filteredEvents
       .filter(e => e.plume_polygon && e.plume_polygon.coordinates)
       .map(e => {
         let coords = e.plume_polygon.coordinates;
@@ -139,7 +153,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           },
         };
       });
-  }, [events, hoursForward]);
+  }, [filteredEvents, hoursForward]);
 
   const plumeGeoJSON = useMemo(() => ({
     type: 'FeatureCollection',
@@ -190,7 +204,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         <TileLayer url={labelUrl} noWrap={false} />
 
         {/* Sensor markers */}
-        {layers.sensors && sensors.map(s => (
+        {layers.sensors && filteredSensors.map(s => (
           <CircleMarker
             key={`sensor-${s.id}`}
             center={[s.lat, s.lon]}
@@ -229,7 +243,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         ))}
 
         {/* Fire event markers */}
-        {layers.fire && events.map(e => (
+        {layers.fire && filteredEvents.map(e => (
           <CircleMarker
             key={`event-${e.id}`}
             center={[e.lat, e.lon]}
@@ -273,7 +287,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         {/* Plume polygons as proper GeoJSON FeatureCollection */}
         {layers.plumes && plumeFeatures.length > 0 && (
           <GeoJSON
-            key={`plumes-${hoursForward}-${events.length}`}
+            key={`plumes-${hoursForward}-${filteredEvents.length}`}
             data={plumeGeoJSON}
             style={plumeStyle}
             onEachFeature={onEachPlumeFeature}
@@ -284,7 +298,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       {/* HUD Overlays */}
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
       <KPIStrip stats={dynamicStats} />
-      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
+      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={filteredEvents} />
       {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
       <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </div>

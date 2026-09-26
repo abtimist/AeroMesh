@@ -15,6 +15,7 @@ import asyncio
 import shutil
 import os
 import uuid
+import shapely.geometry
 
 router = APIRouter()
 
