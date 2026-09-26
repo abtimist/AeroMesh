@@ -4,6 +4,9 @@ import 'leaflet/dist/leaflet.css';
 import KPIStrip from './KPIStrip';
 import LayerControl from './LayerControl';
 import AlertPanel from './AlertPanel';
+import AIEvidencePanel from './AIEvidencePanel';
+import WindOverlay from './WindOverlay';
+import ForecastSlider from './ForecastSlider';
 import { useTheme } from '../hooks';
 
 // AQI level → map marker color
@@ -81,10 +84,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   
   const { dark } = useTheme();
 
-  // State for fetched data
   const [sensors, setSensors] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvidence, setSelectedEvidence] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -179,6 +182,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         style={{ height: '100%', width: '100%', background: dark ? '#0d1117' : '#f8fafc' }}
       >
         <MapController center={currentConfig.center} zoom={currentConfig.zoom} />
+        <WindOverlay isVisible={layers.wind} />
         
         <TileLayer
           url={tileUrl}
@@ -215,10 +219,17 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                     center={[e.lat, e.lon]}
                     radius={12}
                     pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
+                    eventHandlers={{ click: () => setSelectedEvidence({ event_id: 9942, confidence_score: 92.5, severity: 'CRITICAL', event_type: 'Biomass Burning' }) }}
                   >
                     <Popup>
                       <div className="text-sm font-medium">🔥 Active Fire Hotspot (Stubble)</div>
                       <div className="text-xs text-slate-500">NASA FIRMS (VIIRS) · Confidence: 88%</div>
+                      <button 
+                        onClick={() => setSelectedEvidence({ event_id: 9942, confidence_score: 92.5, severity: 'CRITICAL', event_type: 'Biomass Burning' })}
+                        className="mt-2 text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 w-full"
+                      >
+                        View AI Analysis
+                      </button>
                     </Popup>
                   </CircleMarker>
                 )}
@@ -241,10 +252,17 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                   center={[e.lat, e.lon]}
                   radius={12}
                   pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
+                  eventHandlers={{ click: () => setSelectedEvidence(e) }}
                 >
                   <Popup>
                     <div className="text-sm font-medium">🚨 Event #{e.id}</div>
                     <div className="text-xs text-slate-500">Type: {e.event_type} · Severity: {e.severity}</div>
+                    <button 
+                        onClick={() => setSelectedEvidence(e)}
+                        className="mt-2 text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 w-full"
+                    >
+                      View AI Analysis
+                    </button>
                   </Popup>
                 </CircleMarker>
               )}
@@ -263,6 +281,8 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
       <KPIStrip />
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} />
+      {layers.plumes && <ForecastSlider />}
+      <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </div>
   );
 }
