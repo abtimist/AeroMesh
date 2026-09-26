@@ -10,6 +10,14 @@ import FloatingSidebar from '../components/FloatingSidebar';
 export default function DashboardPage({ activeNode, setActiveNode, initialPanel }) {
   const [alertPanelOpen, setAlertPanelOpen] = useState(initialPanel === 'alerts');
   const [measureMode, setMeasureMode] = useState(false);
+  const [inspectMode, setInspectMode] = useState(false);
+  const [mapType, setMapType] = useState('satellite');
+  
+  // Lift layers state up so Sidebar can control overlays
+  const [layers, setLayers] = useState({
+    sensors: true, plumes: true, fire: true, wind: false, corridors: false,
+  });
+  const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     if (initialPanel === 'alerts') setAlertPanelOpen(true);
@@ -24,25 +32,26 @@ export default function DashboardPage({ activeNode, setActiveNode, initialPanel 
         alertPanelOpen={alertPanelOpen}
         onAlertPanelClose={() => setAlertPanelOpen(false)}
         measureMode={measureMode}
+        inspectMode={inspectMode}
+        setInspectMode={setInspectMode}
+        mapType={mapType}
+        layers={layers}
       />
 
-      <FloatingSidebar activeNode={activeNode} setActiveNode={setActiveNode} measureMode={measureMode} setMeasureMode={setMeasureMode} />
-
-      {/* Alert panel trigger — positioned at top-4 right-4, ABOVE the Layers control at top-16 */}
-      {!alertPanelOpen && (
-        <button
-          onClick={() => setAlertPanelOpen(true)}
-          className="absolute top-4 right-4 z-[510] flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold transition-all hover:scale-105"
-          style={{
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-primary)',
-          }}
-        >
-          <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-          Alerts
-        </button>
-      )}
+      <FloatingSidebar 
+        activeNode={activeNode} 
+        setActiveNode={setActiveNode} 
+        measureMode={measureMode} 
+        setMeasureMode={setMeasureMode}
+        inspectMode={inspectMode}
+        setInspectMode={setInspectMode}
+        alertPanelOpen={alertPanelOpen}
+        setAlertPanelOpen={setAlertPanelOpen}
+        mapType={mapType}
+        setMapType={setMapType}
+        layers={layers}
+        toggleLayer={toggleLayer}
+      />
     </DashboardLayout>
   );
 }

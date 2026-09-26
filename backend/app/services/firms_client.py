@@ -92,6 +92,24 @@ class NASA_FIRMSClient:
                 # A robust check would use ST_Equals on geometry, but this prevents simple duplication
                 
                 if not existing:
+                    # Generate a predictive plume polygon using Gaussian Dispersion
+                    try:
+                        from app.services.plume_model import GaussianPlumeModel
+                        import shapely.geometry
+                        
+                        # Simulated regional wind variation based on coordinates
+                        wind_speed = 5.0 + (lat % 2.0) * 2.0
+                        wind_dir = (145.0 + lat * 3.0 - lon * 2.0) % 360.0
+                        pblh = 1000.0
+                        
+                        poly = GaussianPlumeModel.calculate_plume_polygon(
+                            lat, lon, wind_speed, wind_dir, pblh, distance_km=30.0
+                        )
+                        plume_geojson = shapely.geometry.mapping(poly)
+                    except Exception as e:
+                        logger.error(f"Plume generation error: {e}")
+                        plume_geojson = None
+
                     event = PollutionEvent(
                         origin_country='IND', # Simplified for this demo
                         event_type='biomass_burning',
@@ -99,7 +117,9 @@ class NASA_FIRMSClient:
                         severity=severity,
                         confidence_score=conf_score,
                         detected_at=dt,
-                        status='ACTIVE'
+                        status='ACTIVE',
+                        plume_polygon=plume_geojson,
+                        predicted_vector_deg=145.0
                     )
                     db.add(event)
             db.commit()

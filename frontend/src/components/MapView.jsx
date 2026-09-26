@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap, useMapEvents, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import KPIStrip from './KPIStrip';
-import LayerControl from './LayerControl';
 import AlertPanel from './AlertPanel';
 import AIEvidencePanel from './AIEvidencePanel';
 import WindOverlay from './WindOverlay';
@@ -48,17 +46,26 @@ function MapController({ center, zoom }) {
   return null;
 }
 
-export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode }) {
-  const [layers, setLayers] = useState({
-    sensors: true, plumes: true, fire: true, wind: false, corridors: false,
+function MapClickListener({ onMapClick }) {
+  useMapEvents({
+    click(e) {
+      if (onMapClick) onMapClick(e.latlng);
+    },
   });
+  return null;
+}
+
+export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode, inspectMode, setInspectMode, mapType = 'satellite', layers }) {
+
 
   const { dark } = useTheme();
   const [sensors, setSensors] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvidence, setSelectedEvidence] = useState(null);
+  const [clickedLocation, setClickedLocation] = useState(null);
   const [hoursForward, setHoursForward] = useState(0);
+  const [windData, setWindData] = useState({ speed: 15, direction: 145 });
 
   useEffect(() => {
     async function fetchData() {
@@ -83,18 +90,43 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
   const plumeStyle = {
-    fillColor: '#ff2244',
-    fillOpacity: 0.25,
+    fillColor: '#ef4444',
+    fillOpacity: 0.35,
     color: 'transparent',
     opacity: 0,
-    weight: 0,
-    className: 'plume-polygon'
+    weight: 0
   };
 
   // Esri World Imagery (Satellite view)
   const tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
+
+  useEffect(() => {
+    // Fetch real wind data for the current node center using Open-Meteo
+    const fetchWind = async () => {
+      try {
+        const [lat, lon] = currentConfig.center;
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.current_weather) {
+            // Convert km/h to m/s roughly
+            const speedMs = data.current_weather.windspeed * 0.27778;
+            setWindData({
+              speed: speedMs > 5 ? speedMs : 15, // ensure minimum visual wind
+              direction: data.current_weather.winddirection || 145
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch wind data:', err);
+      }
+    };
+    fetchWind();
+    const intervalId = setInterval(fetchWind, 600000); // 10 minutes
+    return () => clearInterval(intervalId);
+  }, [currentConfig.center]);
 
   // Filter data based on active node (roughly 35 degrees radius)
   const isPointInNode = (lat, lon) => {
@@ -172,21 +204,50 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     layer.on('mouseout', () => layer.setStyle(plumeStyle));
   };
 
+  const handleMapClick = async (latlng) => {
+    if (!inspectMode) return;
+    setClickedLocation({ lat: latlng.lat, lng: latlng.lng, loading: true });
+    try {
+      const [weatherRes, aqRes] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latlng.lat}&longitude=${latlng.lng}&current_weather=true`),
+        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latlng.lat}&longitude=${latlng.lng}&current=pm10,pm2_5`)
+      ]);
+      const weather = weatherRes.ok ? await weatherRes.json() : null;
+      const aq = aqRes.ok ? await aqRes.json() : null;
+      
+      setClickedLocation({
+        lat: latlng.lat,
+        lng: latlng.lng,
+        loading: false,
+        weather: weather?.current_weather,
+        aqi: aq?.current
+      });
+    } catch (e) {
+      setClickedLocation(null);
+    }
+  };
+
   return (
-    <div className="relative w-full h-full overflow-hidden" style={{ background: dark ? '#0d1117' : '#e8ecf0' }}>
+    <div 
+      className="relative w-full h-full overflow-hidden" 
+      style={{ 
+        background: dark ? '#0d1117' : '#e8ecf0',
+        cursor: inspectMode ? 'crosshair' : (measureMode ? 'crosshair' : 'default')
+      }}
+    >
       <MapContainer
         center={currentConfig.center}
         zoom={currentConfig.zoom}
         minZoom={3}
         maxZoom={18}
         scrollWheelZoom
-        zoomControl={false}
+        zoomControl={true}
         attributionControl={false}
         worldCopyJump={true}
         style={{ height: '100%', width: '100%', background: dark ? '#0d1117' : '#f8fafc' }}
       >
         <MapController center={currentConfig.center} zoom={currentConfig.zoom} />
-        <WindOverlay isVisible={layers.wind} />
+        <WindOverlay isVisible={layers.wind} windSpeed={windData.speed} windDirection={windData.direction} />
 
         <TileLayer
           url={tileUrl}
@@ -202,11 +263,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
             center={[s.lat, s.lon]}
             radius={8}
             pathOptions={{
-              fillColor: getSensorColor(s.pm25),
-              fillOpacity: 0.65,
-              color: getSensorColor(s.pm25),
-              weight: 0,
-              className: 'heatmap-dot'
+              fillColor: '#22c55e',
+              fillOpacity: 0.8,
+              color: '#16a34a',
+              weight: 1
             }}
           >
             <Tooltip direction="top" offset={[0, -8]} opacity={0.95} className="dark-tooltip" sticky>
@@ -230,11 +290,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
             center={[e.lat, e.lon]}
             radius={6}
             pathOptions={{
-              fillColor: e.severity === 'CRITICAL' ? '#ef4444' : '#f97316',
+              fillColor: '#f97316',
               fillOpacity: 1.0,
-              color: e.severity === 'CRITICAL' ? '#fca5a5' : '#fdba74',
-              weight: 2,
-              className: 'fire-glow-dot'
+              color: '#ea580c',
+              weight: 1
             }}
             eventHandlers={{ click: () => setSelectedEvidence(e) }}
           >
@@ -261,13 +320,78 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           />
         )}
 
+
         <MeasureTool isActive={measureMode} />
         <LocateButton />
+        <MapClickListener onMapClick={handleMapClick} />
       </MapContainer>
 
+      {inspectMode && (
+        <style>{`
+          .leaflet-container { cursor: crosshair !important; }
+          .leaflet-interactive { cursor: crosshair !important; }
+        `}</style>
+      )}
+
+      {/* Dynamic Weather Inspect Panel (Custom UI overlay) */}
+      {clickedLocation && (
+        <div 
+          className="absolute bottom-6 right-6 z-[1000] w-64 rounded-[24px] border shadow-2xl p-4 flex flex-col gap-3 backdrop-blur-md transition-all"
+          style={{
+            background: dark ? 'rgba(15, 15, 20, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: dark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+            color: dark ? '#cbd5e1' : '#334155'
+          }}
+        >
+          <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-500">
+              📍 Location Data
+            </h3>
+            <button 
+              onClick={() => {
+                setClickedLocation(null);
+                setInspectMode(false);
+              }} 
+              className="opacity-50 hover:opacity-100 transition-opacity"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="text-[10px] font-mono opacity-50 mb-1">
+            {clickedLocation.lat.toFixed(4)}, {clickedLocation.lng.toFixed(4)}
+          </div>
+
+          {clickedLocation.loading ? (
+            <div className="text-sm py-4 text-center opacity-70 animate-pulse">Scanning atmosphere...</div>
+          ) : (
+            <div className="flex flex-col gap-2 text-sm font-medium">
+              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
+                <span className="opacity-70">Temperature</span>
+                <span className="text-emerald-500 font-bold">{clickedLocation.weather?.temperature}°C</span>
+              </div>
+              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
+                <span className="opacity-70">Wind</span>
+                <span className="text-sky-400 font-bold">{clickedLocation.weather?.windspeed} km/h</span>
+              </div>
+              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
+                <span className="opacity-70">PM 2.5</span>
+                <span className="font-bold">
+                  {clickedLocation.aqi?.pm2_5 || '--'} µg/m³
+                </span>
+              </div>
+              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
+                <span className="opacity-70">AQI</span>
+                <span className="font-bold uppercase tracking-wide">
+                  {getAqiLabel(clickedLocation.aqi?.pm2_5)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* HUD Overlays */}
-      <LayerControl activeLayers={layers} onToggle={toggleLayer} />
-      <KPIStrip stats={dynamicStats} />
       <AQILegend isVisible={layers.sensors} />
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
       {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
