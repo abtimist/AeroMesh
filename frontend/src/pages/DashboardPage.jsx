@@ -23,14 +23,18 @@ export default function DashboardPage({ activeNode, setActiveNode, initialPanel 
         onAlertPanelClose={() => setAlertPanelOpen(false)}
       />
 
-      {/* Alert panel trigger — clicking Alerts in sidebar should open this */}
-      {/* Shortcut button for demo purposes */}
+      {/* Alert panel trigger — positioned at top-4 right-4, ABOVE the Layers control at top-16 */}
       {!alertPanelOpen && (
         <button
           onClick={() => setAlertPanelOpen(true)}
-          className="absolute top-4 right-[120px] z-[500] flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl shadow-md text-sm font-medium text-slate-700 hover:bg-white transition dark:bg-[#131920]/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-[#131920]"
+          className="absolute top-4 right-4 z-[510] flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold transition-all hover:scale-105"
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-primary)',
+          }}
         >
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
           Alerts
         </button>
       )}

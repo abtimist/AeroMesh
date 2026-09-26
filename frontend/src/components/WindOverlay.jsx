@@ -1,68 +1,64 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { useMap } from 'react-leaflet';
 
+/**
+ * WindOverlay — renders animated wind particles on a Leaflet map canvas.
+ * Only draws within the visible map bounds. Transparent background (no dark fill).
+ */
 const WindOverlay = ({ isVisible, windSpeed = 15, windDirection = 145 }) => {
   const canvasRef = useRef(null);
+  const map = useMap();
 
   useEffect(() => {
-    if (!isVisible || !canvasRef.current) return;
+    if (!isVisible || !canvasRef.current || !map) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let animationFrameId;
-    
-    // Resize to fit container
+
     const resize = () => {
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
+      const container = map.getContainer();
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
     };
     resize();
-    window.addEventListener('resize', resize);
+    map.on('resize', resize);
 
-    // Premium Particle logic (softer, shorter, fading tails like windy.com)
-    const particles = [];
-    const particleCount = 200; // More particles but softer
-    const angleRad = (windDirection - 90) * (Math.PI / 180); 
-    const speed = windSpeed * 0.05; // slower, smoother
+    const particleCount = 120;
+    const angleRad = (windDirection - 90) * (Math.PI / 180);
+    const speed = windSpeed * 0.04;
 
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        len: Math.random() * 5 + 3, // Shorter lines
-        opacity: Math.random() * 0.3 + 0.05,
-        life: Math.random() * 100, // Lifecycle for fading
-        maxLife: Math.random() * 100 + 50
-      });
-    }
+    const particles = Array.from({ length: particleCount }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      len: Math.random() * 8 + 4,
+      opacity: Math.random() * 0.25 + 0.05,
+      life: Math.random() * 80,
+      maxLife: Math.random() * 80 + 40,
+    }));
 
     const draw = () => {
-      // Use semi-transparent fill for trail effect
-      ctx.fillStyle = 'rgba(13, 17, 23, 0.15)'; 
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.lineWidth = 1.0;
+      // Clear fully — no semi-transparent fill that darkens the map
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 1;
 
       particles.forEach(p => {
-        // Fade in/out based on life
         const fade = Math.sin((p.life / p.maxLife) * Math.PI);
-        const currentOpacity = p.opacity * fade;
-        
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(165, 243, 252, ${currentOpacity})`; // Cyan-200
+        ctx.strokeStyle = `rgba(96, 165, 250, ${p.opacity * fade})`;
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x + Math.cos(angleRad) * p.len, p.y + Math.sin(angleRad) * p.len);
         ctx.stroke();
 
-        // Move
         p.x += Math.cos(angleRad) * speed;
         p.y += Math.sin(angleRad) * speed;
         p.life += 1;
 
-        // Reset if offscreen or dead
         if (p.x > canvas.width || p.x < 0 || p.y > canvas.height || p.y < 0 || p.life >= p.maxLife) {
           p.x = Math.random() * canvas.width;
           p.y = Math.random() * canvas.height;
           p.life = 0;
-          p.maxLife = Math.random() * 100 + 50;
+          p.maxLife = Math.random() * 80 + 40;
         }
       });
 
@@ -72,17 +68,22 @@ const WindOverlay = ({ isVisible, windSpeed = 15, windDirection = 145 }) => {
     draw();
 
     return () => {
-      window.removeEventListener('resize', resize);
+      map.off('resize', resize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isVisible, windSpeed, windDirection]);
+  }, [isVisible, windSpeed, windDirection, map]);
 
   if (!isVisible) return null;
 
   return (
-    <canvas 
-      ref={canvasRef} 
-      className="absolute inset-0 pointer-events-none z-[400] opacity-80 mix-blend-screen"
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 400,
+      }}
     />
   );
 };

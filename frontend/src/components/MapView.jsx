@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { useState, useEffect, useMemo } from 'react';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import KPIStrip from './KPIStrip';
 import LayerControl from './LayerControl';
@@ -9,22 +9,32 @@ import WindOverlay from './WindOverlay';
 import ForecastSlider from './ForecastSlider';
 import { useTheme } from '../hooks';
 
-// AQI level → map marker color
+// AQI level → map marker color (EPA standard)
 const getSensorColor = (pm25) => {
   if (!pm25) return '#999';
-  if (pm25 <= 12) return '#00e400'; // GOOD
-  if (pm25 <= 35.4) return '#ffff00'; // MODERATE
-  if (pm25 <= 55.4) return '#ff7e00'; // USG
-  if (pm25 <= 150.4) return '#ff0000'; // UNHEALTHY
-  if (pm25 <= 250.4) return '#8f3f97'; // VERY_UNHEALTHY
-  return '#7e0023'; // HAZARDOUS
+  if (pm25 <= 12) return '#00e400';
+  if (pm25 <= 35.4) return '#ffff00';
+  if (pm25 <= 55.4) return '#ff7e00';
+  if (pm25 <= 150.4) return '#ff0000';
+  if (pm25 <= 250.4) return '#8f3f97';
+  return '#7e0023';
+};
+
+const getAqiLabel = (pm25) => {
+  if (!pm25) return 'N/A';
+  if (pm25 <= 12) return 'Good';
+  if (pm25 <= 35.4) return 'Moderate';
+  if (pm25 <= 55.4) return 'Unhealthy (SG)';
+  if (pm25 <= 150.4) return 'Unhealthy';
+  if (pm25 <= 250.4) return 'Very Unhealthy';
+  return 'Hazardous';
 };
 
 const NODE_CONFIG = {
-  'India Node': { center: [28.6139, 77.209], zoom: 6 },
-  'Brazil Node': { center: [-23.5505, -46.6333], zoom: 6 },
-  'China Node': { center: [39.9042, 116.4074], zoom: 6 },
-  'South Africa Node': { center: [-26.2041, 28.0473], zoom: 8 }
+  'India Node':        { center: [22.5, 78.5],   zoom: 5 },
+  'Brazil Node':       { center: [-14.0, -51.0], zoom: 5 },
+  'China Node':        { center: [35.0, 105.0],  zoom: 5 },
+  'South Africa Node': { center: [-29.0, 25.0],  zoom: 6 },
 };
 
 function MapController({ center, zoom }) {
@@ -37,14 +47,15 @@ function MapController({ center, zoom }) {
 
 export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose }) {
   const [layers, setLayers] = useState({
-    sensors: true, plumes: true, fire: true, wind: false, corridors: true,
+    sensors: true, plumes: true, fire: true, wind: false, corridors: false,
   });
-  
+
   const { dark } = useTheme();
   const [sensors, setSensors] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvidence, setSelectedEvidence] = useState(null);
+  const [hoursForward, setHoursForward] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -53,22 +64,14 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           fetch('http://localhost:8000/api/data/sensors').catch(() => null),
           fetch('http://localhost:8000/api/data/events').catch(() => null)
         ]);
-
-        if (sensorRes && sensorRes.ok) {
-          const data = await sensorRes.json();
-          setSensors(data);
-        }
-        if (eventRes && eventRes.ok) {
-          const data = await eventRes.json();
-          setEvents(data);
-        }
+        if (sensorRes && sensorRes.ok) setSensors(await sensorRes.json());
+        if (eventRes && eventRes.ok) setEvents(await eventRes.json());
       } catch (err) {
-        console.error("Failed to fetch real map data", err);
+        console.error("Failed to fetch map data", err);
       } finally {
         setLoading(false);
       }
     }
-    
     fetchData();
     const intervalId = setInterval(fetchData, 10000);
     return () => clearInterval(intervalId);
@@ -77,133 +80,211 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
   const plumeStyle = {
-    fillColor: '#ff0000',
-    fillOpacity: 0.35,
-    color: '#ff0000',
-    opacity: 0.7,
-    weight: 1.5,
-    dashArray: '4 4',
+    fillColor: '#ff000080',
+    fillOpacity: 0.3,
+    color: '#ff4444',
+    opacity: 0.8,
+    weight: 2,
+    dashArray: '6 3',
   };
 
-  const onEachPlumeFeature = (feature, layer) => {
-    if (feature.properties) {
-      layer.bindPopup(`
-        <div class="text-sm font-medium">🚨 Toxic Plume Dispersion Forecast</div>
-        <div class="text-xs text-slate-500 mt-1">Severity: <span class="font-bold text-red-600">${feature.properties.severity}</span></div>
-        <div class="text-[10px] text-slate-400 mt-1">AeroMesh ML Model Prediction based on wind vectors and emission source.</div>
-      `);
-    }
-  };
-
-  // Free Esri Canvas Maps (No API Key Required)
-  const tileUrl = dark 
+  // Esri Dark/Light Gray Canvas — truly free, no API key
+  const tileUrl = dark
     ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
     : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 
+  // Esri reference layer — adds city/country labels on top
+  const labelUrl = dark
+    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
 
-  // Calculate real stats for KPI strip
-  const dynamicStats = {
-    activeEvents: events.length,
-    pm25Peak: sensors.length > 0 ? Math.max(...sensors.map(s => s.pm25 || 0)).toFixed(1) : 0,
-    wind: '18 km/h NW',
-    stationsOnline: sensors.length,
+  // Dynamic KPI stats from real data
+  const dynamicStats = useMemo(() => {
+    const peakSensor = sensors.length > 0
+      ? sensors.reduce((a, b) => ((a.pm25 || 0) > (b.pm25 || 0) ? a : b), sensors[0])
+      : null;
+    return {
+      activeEvents: events.length,
+      pm25Peak: peakSensor ? peakSensor.pm25 : 0,
+      pm25Location: peakSensor ? peakSensor.name : '—',
+      stationsOnline: sensors.length,
+    };
+  }, [sensors, events]);
+
+  // Build GeoJSON features with properties so popups work
+  const plumeFeatures = useMemo(() => {
+    return events
+      .filter(e => e.plume_polygon && e.plume_polygon.coordinates)
+      .map(e => {
+        let coords = e.plume_polygon.coordinates;
+        // Apply forecast time offset
+        if (hoursForward > 0 && coords[0]) {
+          const offsetLon = hoursForward * 0.04;
+          const offsetLat = hoursForward * 0.008;
+          coords = [coords[0].map(c => [c[0] + offsetLon, c[1] + offsetLat])];
+        }
+        return {
+          type: 'Feature',
+          properties: {
+            id: e.id,
+            severity: e.severity,
+            event_type: e.event_type,
+            confidence: e.confidence,
+          },
+          geometry: {
+            type: e.plume_polygon.type || 'Polygon',
+            coordinates: coords,
+          },
+        };
+      });
+  }, [events, hoursForward]);
+
+  const plumeGeoJSON = useMemo(() => ({
+    type: 'FeatureCollection',
+    features: plumeFeatures,
+  }), [plumeFeatures]);
+
+  const onEachPlumeFeature = (feature, layer) => {
+    const p = feature.properties || {};
+    layer.bindPopup(
+      `<div style="font-family:Inter,sans-serif;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">🚨 Plume Dispersion Zone</div>
+        <div style="font-size:11px;color:#666;">
+          Severity: <strong style="color:#dc2626;">${p.severity || 'N/A'}</strong><br/>
+          Type: ${p.event_type || 'Unknown'}<br/>
+          Confidence: ${p.confidence ? p.confidence.toFixed(1) + '%' : 'N/A'}<br/>
+          <span style="font-size:10px;color:#999;margin-top:4px;display:block;">
+            Gaussian plume model · T+${hoursForward}h forecast
+          </span>
+        </div>
+      </div>`
+    );
+    layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.5, weight: 3 }));
+    layer.on('mouseout', () => layer.setStyle(plumeStyle));
   };
 
-  const [hoursForward, setHoursForward] = useState(0);
-
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#0d1117]">
+    <div className="relative w-full h-full overflow-hidden" style={{ background: dark ? '#0d1117' : '#e8ecf0' }}>
       <MapContainer
         center={currentConfig.center}
         zoom={currentConfig.zoom}
+        minZoom={3}
+        maxZoom={18}
         scrollWheelZoom
         zoomControl={false}
         attributionControl={false}
+        worldCopyJump={true}
         style={{ height: '100%', width: '100%', background: dark ? '#0d1117' : '#f8fafc' }}
       >
         <MapController center={currentConfig.center} zoom={currentConfig.zoom} />
         <WindOverlay isVisible={layers.wind} />
-        
+
         <TileLayer
           url={tileUrl}
           attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+          noWrap={false}
         />
+        {/* Label overlay — city/country names */}
+        <TileLayer url={labelUrl} noWrap={false} />
 
+        {/* Sensor markers */}
         {layers.sensors && sensors.map(s => (
           <CircleMarker
-            key={s.id || s.name}
+            key={`sensor-${s.id}`}
             center={[s.lat, s.lon]}
-            radius={6}
+            radius={7}
             pathOptions={{
               fillColor: getSensorColor(s.pm25),
               fillOpacity: 0.9,
-              color: dark ? '#131920' : '#ffffff',
-              weight: 1.5,
+              color: dark ? '#1a2030' : '#ffffff',
+              weight: 2,
             }}
           >
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent={false}>
+              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 140 }}>
+                <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>{s.name}</div>
+                <div style={{ fontSize: 11, color: '#666' }}>
+                  PM2.5: <strong style={{ color: getSensorColor(s.pm25) }}>{s.pm25} µg/m³</strong>
+                </div>
+                <div style={{ fontSize: 10, color: '#999' }}>AQI: {getAqiLabel(s.pm25)}</div>
+                <div style={{ fontSize: 10, color: '#aaa' }}>Source: {s.provider}</div>
+              </div>
+            </Tooltip>
             <Popup>
-              <div className="text-sm font-medium">{s.location || s.name}</div>
-              <div className="text-xs text-slate-500">PM2.5: {s.pm25} µg/m³</div>
-              <div className="text-[10px] text-slate-400">Source: {s.provider}</div>
+              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 180 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{s.name}</div>
+                <table style={{ fontSize: 11, width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>PM2.5</td><td style={{ fontWeight: 600 }}>{s.pm25} µg/m³</td></tr>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>AQI Level</td><td><span style={{ color: getSensorColor(s.pm25), fontWeight: 600 }}>{getAqiLabel(s.pm25)}</span></td></tr>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Provider</td><td>{s.provider}</td></tr>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Updated</td><td style={{ fontSize: 10 }}>{s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : '—'}</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </Popup>
           </CircleMarker>
         ))}
 
-        {events.map((e) => {
-          // Calculate an offset plume if forecast is active
-          // Wind usually moves west-to-east or based on vector. For demo, we just shift it horizontally and slightly vertically based on hours.
-          let displayPlume = e.plume_polygon;
-          if (displayPlume && displayPlume.coordinates && hoursForward > 0) {
-            const offsetLon = hoursForward * 0.05; // ~5km per hour shift east
-            const offsetLat = hoursForward * 0.01; // ~1km per hour shift north
-            const newCoords = displayPlume.coordinates[0].map(coord => [
-              coord[0] + offsetLon,
-              coord[1] + offsetLat
-            ]);
-            displayPlume = {
-              ...displayPlume,
-              coordinates: [newCoords]
-            };
-          }
-
-          return (
-            <div key={e.id || Math.random()}>
-              {layers.fire && (
-                <CircleMarker
-                  center={[e.lat, e.lon]}
-                  radius={10}
-                  pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
-                  eventHandlers={{ click: () => setSelectedEvidence(e) }}
+        {/* Fire event markers */}
+        {layers.fire && events.map(e => (
+          <CircleMarker
+            key={`event-${e.id}`}
+            center={[e.lat, e.lon]}
+            radius={11}
+            pathOptions={{
+              fillColor: e.severity === 'CRITICAL' ? '#dc2626' : '#ff4500',
+              fillOpacity: 0.9,
+              color: dark ? '#1a2030' : '#ffffff',
+              weight: 2,
+            }}
+            eventHandlers={{ click: () => setSelectedEvidence(e) }}
+          >
+            <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
+              <div style={{ fontFamily: 'Inter, sans-serif' }}>
+                <div style={{ fontWeight: 600, fontSize: 12 }}>🔥 Event #{e.id}</div>
+                <div style={{ fontSize: 11, color: '#666' }}>{e.event_type} · {e.severity}</div>
+              </div>
+            </Tooltip>
+            <Popup>
+              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 200 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>🚨 Pollution Event #{e.id}</div>
+                <table style={{ fontSize: 11, width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Type</td><td style={{ fontWeight: 600 }}>{e.event_type}</td></tr>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Severity</td><td><span style={{ color: '#dc2626', fontWeight: 700 }}>{e.severity}</span></td></tr>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Confidence</td><td>{e.confidence?.toFixed(1)}%</td></tr>
+                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Detected</td><td style={{ fontSize: 10 }}>{e.detected_at ? new Date(e.detected_at).toLocaleString() : '—'}</td></tr>
+                  </tbody>
+                </table>
+                <button
+                  onclick="document.dispatchEvent(new CustomEvent('aeromesh-view-evidence'))"
+                  style="margin-top:8px;width:100%;padding:6px;font-size:11px;font-weight:600;color:#fff;background:#4f46e5;border:none;border-radius:8px;cursor:pointer;"
                 >
-                  <Popup>
-                    <div className="text-sm font-medium">🚨 Event #{e.id}</div>
-                    <div className="text-xs text-slate-500">Type: {e.event_type} · Severity: {e.severity}</div>
-                    <button 
-                        onClick={() => setSelectedEvidence(e)}
-                        className="mt-2 text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 w-full"
-                    >
-                      View AI Analysis
-                    </button>
-                  </Popup>
-                </CircleMarker>
-              )}
-              {layers.plumes && displayPlume && (
-                <GeoJSON 
-                  key={`${e.id}-${hoursForward}`}
-                  data={displayPlume} 
-                  style={plumeStyle} 
-                  onEachFeature={onEachPlumeFeature}
-                />
-              )}
-            </div>
-          );
-        })}
+                  View AI Analysis →
+                </button>
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
+
+        {/* Plume polygons as proper GeoJSON FeatureCollection */}
+        {layers.plumes && plumeFeatures.length > 0 && (
+          <GeoJSON
+            key={`plumes-${hoursForward}-${events.length}`}
+            data={plumeGeoJSON}
+            style={plumeStyle}
+            onEachFeature={onEachPlumeFeature}
+          />
+        )}
       </MapContainer>
 
+      {/* HUD Overlays */}
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
       <KPIStrip stats={dynamicStats} />
-      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} />
+      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
       {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
       <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </div>

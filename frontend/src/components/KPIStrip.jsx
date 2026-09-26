@@ -3,11 +3,15 @@ import { AlertTriangle, Wind, MonitorDot, Factory } from 'lucide-react';
 
 export default function KPIStrip({ stats }) {
   const {
-    activeEvents = 4,
-    pm25Peak = 452,
-    wind = '12 km/h NW',
-    stationsOnline = 142,
+    activeEvents = 0,
+    pm25Peak = 0,
+    pm25Location = '—',
+    stationsOnline = 0,
   } = stats || {};
+
+  // Derive status badges from real data
+  const eventTrend = activeEvents > 0 ? `${activeEvents} active` : 'None';
+  const sensorStatus = stationsOnline > 0 ? `${stationsOnline} online` : 'No data';
 
   return (
     <div className="absolute top-4 left-4 z-[500] flex flex-col sm:flex-row gap-3 pointer-events-auto">
@@ -15,29 +19,29 @@ export default function KPIStrip({ stats }) {
         icon={AlertTriangle}
         label="Active Events"
         value={activeEvents}
-        trend="2 this hour"
-        trendUp
+        trend={eventTrend}
+        trendUp={activeEvents > 0}
         iconColor="text-red-400"
       />
       <StatCard
         icon={Factory}
-        label="PM2.5 Peak (Okhla)"
+        label={`PM2.5 Peak (${pm25Location})`}
         value={`${pm25Peak} µg/m³`}
-        trend="↑ from 380"
-        trendUp
+        trend={pm25Peak > 150 ? 'UNHEALTHY' : pm25Peak > 50 ? 'MODERATE' : 'GOOD'}
+        trendUp={pm25Peak > 150}
         iconColor="text-orange-400"
       />
       <StatCard
         icon={Wind}
-        label="Prevailing Wind"
-        value={wind}
+        label="Forecast Range"
+        value="T+0 → T+24h"
         iconColor="text-blue-400"
       />
       <StatCard
         icon={MonitorDot}
         label="Sensors Online"
         value={stationsOnline}
-        trend="3 offline"
+        trend={sensorStatus}
         trendUp={false}
         iconColor="text-green-500"
       />
