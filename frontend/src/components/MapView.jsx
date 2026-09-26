@@ -97,8 +97,8 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
 
   // Premium CartoDB Maps
   const tileUrl = dark 
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";
 
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
 
