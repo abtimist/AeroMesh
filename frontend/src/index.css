@@ -245,3 +245,18 @@ html.dark [data-aqi="HAZARDOUS"]      { background-color: #3b0010; color: #fda4a
 .darkened-satellite {
   filter: brightness(0.6) contrast(1.2) saturate(1.1);
 }
+
+/* ============================================================
+   Dark Tooltip for Map Features
+   ============================================================ */
+.leaflet-tooltip.dark-tooltip {
+  background: rgba(15, 15, 20, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 8px !important;
+}
+.leaflet-tooltip.dark-tooltip::before {
+  border-top-color: rgba(15, 15, 20, 0.85) !important;
+}

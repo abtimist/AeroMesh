@@ -80,12 +80,12 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
   const plumeStyle = {
-    fillColor: '#ff000080',
-    fillOpacity: 0.3,
-    color: '#ff4444',
-    opacity: 0.8,
-    weight: 2,
-    dashArray: '6 3',
+    fillColor: '#ff2244',
+    fillOpacity: 0.25,
+    color: 'transparent',
+    opacity: 0,
+    weight: 0,
+    className: 'plume-polygon'
   };
 
   // Esri World Imagery (Satellite view)
@@ -155,20 +155,17 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
 
   const onEachPlumeFeature = (feature, layer) => {
     const p = feature.properties || {};
-    layer.bindPopup(
-      `<div style="font-family:Inter,sans-serif;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">🚨 Plume Dispersion Zone</div>
-        <div style="font-size:11px;color:#666;">
-          Severity: <strong style="color:#dc2626;">${p.severity || 'N/A'}</strong><br/>
-          Type: ${p.event_type || 'Unknown'}<br/>
-          Confidence: ${p.confidence ? p.confidence.toFixed(1) + '%' : 'N/A'}<br/>
-          <span style="font-size:10px;color:#999;margin-top:4px;display:block;">
-            Gaussian plume model · T+${hoursForward}h forecast
-          </span>
+    layer.bindTooltip(
+      `<div style="font-family:Inter,sans-serif; text-align:left;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:2px;color:#fff;">Plume Forecast</div>
+        <div style="font-size:11px;color:#cbd5e1;">
+          Severity: <strong style="color:#f87171;">${p.severity || 'N/A'}</strong><br/>
+          T+${hoursForward}h Dispersion
         </div>
-      </div>`
+      </div>`,
+      { sticky: true, className: 'dark-tooltip', opacity: 0.95 }
     );
-    layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.5, weight: 3 }));
+    layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.45 }));
     layer.on('mouseout', () => layer.setStyle(plumeStyle));
   };
 
