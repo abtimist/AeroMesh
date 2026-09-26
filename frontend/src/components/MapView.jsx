@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap,
 import 'leaflet/dist/leaflet.css';
 import AlertPanel from './AlertPanel';
 import AIEvidencePanel from './AIEvidencePanel';
-import WindOverlay from './WindOverlay';
+import WindVelocityLayer from './WindVelocityLayer';
 import ForecastSlider from './ForecastSlider';
 import AQILegend from './AQILegend';
 import LocateButton from './LocateButton';
@@ -247,7 +247,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         style={{ height: '100%', width: '100%', background: dark ? '#0d1117' : '#f8fafc' }}
       >
         <MapController center={currentConfig.center} zoom={currentConfig.zoom} />
-        <WindOverlay isVisible={layers.wind} windSpeed={windData.speed} windDirection={windData.direction} />
+        {layers.wind && <WindVelocityLayer />}
 
         <TileLayer
           url={tileUrl}
