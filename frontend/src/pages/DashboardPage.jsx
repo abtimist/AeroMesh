@@ -9,6 +9,7 @@ import FloatingSidebar from '../components/FloatingSidebar';
 
 export default function DashboardPage({ activeNode, setActiveNode, initialPanel }) {
   const [alertPanelOpen, setAlertPanelOpen] = useState(initialPanel === 'alerts');
+  const [measureMode, setMeasureMode] = useState(false);
 
   useEffect(() => {
     if (initialPanel === 'alerts') setAlertPanelOpen(true);
@@ -22,9 +23,10 @@ export default function DashboardPage({ activeNode, setActiveNode, initialPanel 
         activeNode={activeNode}
         alertPanelOpen={alertPanelOpen}
         onAlertPanelClose={() => setAlertPanelOpen(false)}
+        measureMode={measureMode}
       />
 
-      <FloatingSidebar activeNode={activeNode} setActiveNode={setActiveNode} />
+      <FloatingSidebar activeNode={activeNode} setActiveNode={setActiveNode} measureMode={measureMode} setMeasureMode={setMeasureMode} />
 
       {/* Alert panel trigger — positioned at top-4 right-4, ABOVE the Layers control at top-16 */}
       {!alertPanelOpen && (

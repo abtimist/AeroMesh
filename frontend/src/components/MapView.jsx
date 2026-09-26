@@ -8,6 +8,8 @@ import AIEvidencePanel from './AIEvidencePanel';
 import WindOverlay from './WindOverlay';
 import ForecastSlider from './ForecastSlider';
 import AQILegend from './AQILegend';
+import LocateButton from './LocateButton';
+import MeasureTool from './MeasureTool';
 import { useTheme } from '../hooks';
 
 // AQI level → map marker color (EPA standard)
@@ -46,7 +48,7 @@ function MapController({ center, zoom }) {
   return null;
 }
 
-export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose }) {
+export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode }) {
   const [layers, setLayers] = useState({
     sensors: true, plumes: true, fire: true, wind: false, corridors: false,
   });
@@ -258,6 +260,9 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
             onEachFeature={onEachPlumeFeature}
           />
         )}
+
+        <MeasureTool isActive={measureMode} />
+        <LocateButton />
       </MapContainer>
 
       {/* HUD Overlays */}

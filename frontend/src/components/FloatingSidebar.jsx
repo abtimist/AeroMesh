@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTheme } from '../hooks';
-import { Globe2, Map, ShieldAlert, Navigation } from 'lucide-react';
+import { Globe2, Map, ShieldAlert, Navigation, Ruler } from 'lucide-react';
 
 const NODES = [
   { id: 'India Node', icon: Globe2 },
@@ -9,7 +9,7 @@ const NODES = [
   { id: 'South Africa Node', icon: Navigation }
 ];
 
-export default function FloatingSidebar({ activeNode, setActiveNode }) {
+export default function FloatingSidebar({ activeNode, setActiveNode, measureMode, setMeasureMode }) {
   const { dark } = useTheme();
 
   return (
@@ -52,6 +52,33 @@ export default function FloatingSidebar({ activeNode, setActiveNode }) {
             </button>
           );
         })}
+        
+        <div className="w-full h-px bg-gray-500/20 my-1" />
+        
+        {/* Measure Tool Button */}
+        <button
+          onClick={() => setMeasureMode(!measureMode)}
+          className="relative group p-3 rounded-2xl transition-all duration-200 flex items-center justify-center"
+          style={{
+            background: measureMode ? (dark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)') : 'transparent',
+            color: measureMode ? '#3b82f6' : (dark ? '#64748b' : '#94a3b8'),
+          }}
+          onMouseEnter={e => { if (!measureMode) e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'; }}
+          onMouseLeave={e => { if (!measureMode) e.currentTarget.style.background = 'transparent'; }}
+        >
+          <Ruler className="w-5 h-5" />
+          {/* Tooltip */}
+          <div className="absolute left-full ml-4 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 shadow-xl backdrop-blur-md"
+            style={{
+              background: dark ? 'rgba(15, 15, 20, 0.85)' : 'rgba(255, 255, 255, 0.95)',
+              color: dark ? '#fff' : '#000',
+              border: '1px solid',
+              borderColor: dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            }}
+          >
+            Measure Distance
+          </div>
+        </button>
       </div>
     </div>
   );
