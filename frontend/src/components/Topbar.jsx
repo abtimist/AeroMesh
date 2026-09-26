@@ -106,40 +106,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
           )}
         </div>
 
-        {/* Node switcher */}
-        <div className="relative">
-          <button
-            onClick={() => toggleDropdown('node')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: inputBg, border: `1px solid ${border}`, color: text }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-            {activeNode}
-            <ChevronDown className={`w-3 h-3 transition-transform ${activeDropdown === 'node' ? 'rotate-180' : ''}`} style={{ color: muted }} />
-          </button>
-          {activeDropdown === 'node' && (
-            <div
-              className="absolute right-0 top-full mt-1 w-52 rounded-xl shadow-xl py-1 z-50 border"
-              style={{ background: surface, borderColor: border }}
-            >
-              {NODES.map(n => (
-                <button
-                  key={n}
-                  onClick={() => { setActiveNode(n); setActiveDropdown(null); }}
-                  className="w-full text-left px-3 py-2 text-sm transition"
-                  style={{
-                    color: activeNode === n ? '#2563eb' : text,
-                    fontWeight: activeNode === n ? 600 : 400,
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+
 
         {/* Dark/Light toggle */}
         <button

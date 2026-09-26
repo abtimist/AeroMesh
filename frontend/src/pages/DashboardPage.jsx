@@ -1,10 +1,11 @@
 // DashboardPage — the main Command Center view
 // Full-bleed map + floating KPIs + slide-in AlertPanel triggered from sidebar
-// Uses DashboardLayout which provides Topbar + Sidebar
+// Uses DashboardLayout which provides Topbar
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import MapView from '../components/MapView';
+import FloatingSidebar from '../components/FloatingSidebar';
 
 export default function DashboardPage({ activeNode, setActiveNode, initialPanel }) {
   const [alertPanelOpen, setAlertPanelOpen] = useState(initialPanel === 'alerts');
@@ -22,6 +23,8 @@ export default function DashboardPage({ activeNode, setActiveNode, initialPanel 
         alertPanelOpen={alertPanelOpen}
         onAlertPanelClose={() => setAlertPanelOpen(false)}
       />
+
+      <FloatingSidebar activeNode={activeNode} setActiveNode={setActiveNode} />
 
       {/* Alert panel trigger — positioned at top-4 right-4, ABOVE the Layers control at top-16 */}
       {!alertPanelOpen && (
