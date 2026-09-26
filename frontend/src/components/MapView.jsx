@@ -95,10 +95,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     }
   };
 
-  // Premium CartoDB Maps
+  // Free Esri Canvas Maps (No API Key Required)
   const tileUrl = dark 
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?v=2"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?v=2";
+    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
 
@@ -125,7 +125,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         
         <TileLayer
           url={tileUrl}
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
         />
 
         {layers.sensors && sensors.map(s => (
