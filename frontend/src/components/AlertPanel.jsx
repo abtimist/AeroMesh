@@ -51,73 +51,67 @@ export default function AlertPanel({ open, onClose, events = [] }) {
   return (
     <>
       {/* Backdrop */}
-      {open && (
-        <div className="absolute inset-0 z-[600]" onClick={onClose} />
-      )}
+      <div 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+        onClick={onClose}
+      />
 
-      {/* Slide-in panel */}
-      <aside
-        className="absolute top-0 right-0 h-full shadow-2xl z-[700] flex flex-col overflow-hidden alert-panel"
-        style={{
-          width: 'var(--panel-width)',
-          background: 'var(--color-panel-bg)',
-          borderLeft: '1px solid var(--color-border)',
-          transform: open ? 'translateX(0)' : 'translateX(100%)',
-        }}
+      {/* Centered Modal */}
+      <div 
+        className={`fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none p-4 ${open ? '' : 'hidden'}`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <div>
-            <h2 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>Real-time Event Feed</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-              {events.length} active event{events.length !== 1 ? 's' : ''} detected
-            </p>
+        <div 
+          className={`pointer-events-auto w-full max-w-lg bg-gray-900/90 backdrop-blur-xl border border-gray-700/50 shadow-2xl overflow-hidden transition-all duration-300 ease-out transform rounded-[16px] ${open ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4'}`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-gray-900/50 shrink-0">
+            <div>
+              <h2 className="font-semibold text-white">Real-time Event Feed</h2>
+              <p className="text-xs mt-0.5 text-gray-400">
+                {events.length} active event{events.length !== 1 ? 's' : ''} detected
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {criticalCount > 0 && (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 bg-red-950/50 border border-red-900/50 px-3 py-1.5 rounded-full animate-pulse">
+                  {criticalCount} critical
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {criticalCount > 0 && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-full animate-pulse dark:bg-red-950 dark:border-red-900 dark:text-red-400">
-                {criticalCount} critical
-              </span>
+
+          {/* Scrollable event list */}
+          <div className="overflow-y-auto p-6 space-y-4 max-h-[60vh] custom-scrollbar">
+            {events.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                <AlertTriangle className="w-12 h-12 mb-4 text-gray-600" />
+                <p className="text-base font-medium text-gray-300">No active events</p>
+                <p className="text-sm mt-1 text-gray-500">Events will appear here when detected.</p>
+              </div>
+            ) : (
+              events.map(event => (
+                <EventCard key={event.id} event={event} />
+              ))
             )}
+          </div>
+
+          {/* Footer with Pill Button */}
+          <div className="px-6 py-5 border-t border-gray-700/50 bg-gray-900/50 flex flex-col gap-3">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg transition"
-              style={{ color: 'var(--color-text-disabled)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-hover)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-full transition-colors duration-200 shadow-lg shadow-blue-500/20"
+              style={{ minHeight: '40px' }}
             >
-              <X className="w-4 h-4" />
+              Close Feed
+            </button>
+            <button
+              className="w-full py-2 text-xs font-medium rounded-full transition text-blue-400 hover:bg-gray-800/80"
+            >
+              View full alert history →
             </button>
           </div>
         </div>
-
-        {/* Scrollable event list */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {events.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <AlertTriangle className="w-10 h-10 mb-3" style={{ color: 'var(--color-text-disabled)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>No active events</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-text-disabled)' }}>Events will appear here when detected.</p>
-            </div>
-          ) : (
-            events.map(event => (
-              <EventCard key={event.id} event={event} />
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 shrink-0" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <button
-            className="w-full py-2 text-xs font-medium rounded-lg transition"
-            style={{ color: 'var(--color-primary)' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-tint)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            View full alert history →
-          </button>
-        </div>
-      </aside>
+      </div>
     </>
   );
 }
