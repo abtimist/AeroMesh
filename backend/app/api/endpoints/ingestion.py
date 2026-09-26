@@ -5,7 +5,13 @@ from app.services.meteo_client import OpenMeteoClient
 from app.services.firms_client import NASA_FIRMSClient
 from app.db.session import SessionLocal
 from app.models.report import CitizenReport
-from app.services.laya_cv import laya_cv
+from app.models.event import PollutionEvent
+from app.models.weather import WeatherLog
+from app.services.vision_model import vision_engine
+from app.services.plume_model import GaussianPlumeModel
+from app.services.fusion_engine import EvidenceFusionEngine
+from geoalchemy2.shape import from_shape
+from datetime import datetime, timezone
 import asyncio
 import shutil
 import os
@@ -78,11 +84,15 @@ async def submit_citizen_report(
         filename = f"{uuid.uuid4()}.{ext}"
         filepath = os.path.join(upload_dir, filename)
         
+        # Read contents for CV
+        photo.file.seek(0)
+        contents = photo.file.read()
+        
         with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(photo.file, buffer)
+            buffer.write(contents)
             
         # 2. Run Local PyTorch CV Verification (Laya Engine)
-        cv_result = laya_cv.analyze_image(filepath)
+        cv_result = vision_engine.analyze_image(contents)
         
         # 3. Create PostGIS geometry point: POINT(lon lat)
         point = f"SRID=4326;POINT({lon} {lat})"
@@ -92,9 +102,38 @@ async def submit_citizen_report(
             device_id=device_id,
             location=point,
             image_url=filepath,
-            laya_confidence_score=cv_result.get("confidence", 0.0)
+            laya_confidence_score=cv_result.get("confidence_score", 0.0)
         )
         db.add(report)
+        db.flush()
+        
+        # 5. Core Integration: If CV detects smoke, create an Event, generate Plume, and fuse evidence!
+        if cv_result.get("detected"):
+            event = PollutionEvent(
+                origin_country="IN", # Mock ISO for demo
+                event_type="citizen_smoke_report",
+                centroid=point,
+                severity="HIGH",
+                confidence_score=cv_result.get("confidence_score", 50.0),
+                detected_at=datetime.now(timezone.utc),
+                status="ACTIVE"
+            )
+            db.add(event)
+            db.flush()
+            
+            # Generate Plume
+            weather = db.query(WeatherLog).order_by(WeatherLog.timestamp.desc()).first()
+            plume_poly = GaussianPlumeModel.generate_forecast(event, weather)
+            event.plume_polygon = from_shape(plume_poly, srid=4326)
+            
+            # Link report
+            report.linked_event_id = event.id
+            db.flush()
+            
+            # Fuse evidence to finalize score
+            final_score = EvidenceFusionEngine.calculate_confidence(event.id)
+            event.confidence_score = final_score
+            
         db.commit()
         db.refresh(report)
         
@@ -102,7 +141,8 @@ async def submit_citizen_report(
             "status": "success", 
             "message": "Report submitted successfully",
             "report_id": report.id,
-            "laya_analysis": cv_result
+            "laya_analysis": cv_result,
+            "linked_event_id": report.linked_event_id
         }
     except Exception as e:
         db.rollback()
