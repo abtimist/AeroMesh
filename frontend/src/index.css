@@ -238,3 +238,10 @@ html.dark [data-aqi="HAZARDOUS"]      { background-color: #3b0010; color: #fda4a
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-disabled); }
+
+/* ============================================================
+   Darkened Satellite Base Map
+   ============================================================ */
+.darkened-satellite {
+  filter: brightness(0.6) contrast(1.2) saturate(1.1);
+}

@@ -88,15 +88,8 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     dashArray: '6 3',
   };
 
-  // Esri Dark/Light Gray Canvas — truly free, no API key
-  const tileUrl = dark
-    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-
-  // Esri reference layer — adds city/country labels on top
-  const labelUrl = dark
-    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
-    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+  // Esri World Imagery (Satellite view)
+  const tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
 
@@ -199,9 +192,8 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           url={tileUrl}
           attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
           noWrap={false}
+          className="darkened-satellite"
         />
-        {/* Label overlay — city/country names */}
-        <TileLayer url={labelUrl} noWrap={false} />
 
         {/* Sensor markers */}
         {layers.sensors && sensors.map(s => (
