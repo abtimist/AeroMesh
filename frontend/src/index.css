@@ -260,3 +260,22 @@ html.dark [data-aqi="HAZARDOUS"]      { background-color: #3b0010; color: #fda4a
 .leaflet-tooltip.dark-tooltip::before {
   border-top-color: rgba(15, 15, 20, 0.85) !important;
 }
+
+/* ============================================================
+   Heatmap and Glow Overlays
+   ============================================================ */
+.heatmap-dot {
+  filter: drop-shadow(0 0 12px currentColor);
+  mix-blend-mode: screen;
+}
+
+.fire-glow-dot {
+  filter: drop-shadow(0 0 16px currentColor) drop-shadow(0 0 4px currentColor);
+  mix-blend-mode: screen;
+  animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from { opacity: 0.8; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.1); }
+}

@@ -197,37 +197,26 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           <CircleMarker
             key={`sensor-${s.id}`}
             center={[s.lat, s.lon]}
-            radius={7}
+            radius={8}
             pathOptions={{
               fillColor: getSensorColor(s.pm25),
-              fillOpacity: 0.9,
-              color: dark ? '#1a2030' : '#ffffff',
-              weight: 2,
+              fillOpacity: 0.65,
+              color: getSensorColor(s.pm25),
+              weight: 0,
+              className: 'heatmap-dot'
             }}
           >
-            <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent={false}>
-              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 140 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>{s.name}</div>
-                <div style={{ fontSize: 11, color: '#666' }}>
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95} className="dark-tooltip" sticky>
+              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 140, textAlign: 'left' }}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: '#fff' }}>{s.name}</div>
+                <div style={{ fontSize: 11, color: '#cbd5e1' }}>
                   PM2.5: <strong style={{ color: getSensorColor(s.pm25) }}>{s.pm25} µg/m³</strong>
                 </div>
-                <div style={{ fontSize: 10, color: '#999' }}>AQI: {getAqiLabel(s.pm25)}</div>
-                <div style={{ fontSize: 10, color: '#aaa' }}>Source: {s.provider}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                  AQI: <span style={{ color: getSensorColor(s.pm25) }}>{getAqiLabel(s.pm25)}</span>
+                </div>
               </div>
             </Tooltip>
-            <Popup>
-              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 180 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{s.name}</div>
-                <table style={{ fontSize: 11, width: '100%', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>PM2.5</td><td style={{ fontWeight: 600 }}>{s.pm25} µg/m³</td></tr>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>AQI Level</td><td><span style={{ color: getSensorColor(s.pm25), fontWeight: 600 }}>{getAqiLabel(s.pm25)}</span></td></tr>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Provider</td><td>{s.provider}</td></tr>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Updated</td><td style={{ fontSize: 10 }}>{s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : '—'}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </Popup>
           </CircleMarker>
         ))}
 
@@ -236,42 +225,28 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           <CircleMarker
             key={`event-${e.id}`}
             center={[e.lat, e.lon]}
-            radius={11}
+            radius={6}
             pathOptions={{
-              fillColor: e.severity === 'CRITICAL' ? '#dc2626' : '#ff4500',
-              fillOpacity: 0.9,
-              color: dark ? '#1a2030' : '#ffffff',
+              fillColor: e.severity === 'CRITICAL' ? '#ef4444' : '#f97316',
+              fillOpacity: 1.0,
+              color: e.severity === 'CRITICAL' ? '#fca5a5' : '#fdba74',
               weight: 2,
+              className: 'fire-glow-dot'
             }}
             eventHandlers={{ click: () => setSelectedEvidence(e) }}
           >
-            <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
-              <div style={{ fontFamily: 'Inter, sans-serif' }}>
-                <div style={{ fontWeight: 600, fontSize: 12 }}>🔥 Event #{e.id}</div>
-                <div style={{ fontSize: 11, color: '#666' }}>{e.event_type} · {e.severity}</div>
+            <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="dark-tooltip" sticky>
+              <div style={{ fontFamily: 'Inter, sans-serif', textAlign: 'left' }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: '#fff', marginBottom: 2 }}>🔥 Thermal Anomaly</div>
+                <div style={{ fontSize: 11, color: '#cbd5e1' }}>
+                  Severity: <strong style={{ color: e.severity === 'CRITICAL' ? '#ef4444' : '#f97316' }}>{e.severity}</strong><br/>
+                  <span style={{ color: '#94a3b8' }}>Click to view AI Evidence</span>
+                </div>
               </div>
             </Tooltip>
-            <Popup>
-              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 200 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>🚨 Pollution Event #{e.id}</div>
-                <table style={{ fontSize: 11, width: '100%', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Type</td><td style={{ fontWeight: 600 }}>{e.event_type}</td></tr>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Severity</td><td><span style={{ color: '#dc2626', fontWeight: 700 }}>{e.severity}</span></td></tr>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Confidence</td><td>{e.confidence?.toFixed(1)}%</td></tr>
-                    <tr><td style={{ color: '#888', padding: '2px 0' }}>Detected</td><td style={{ fontSize: 10 }}>{e.detected_at ? new Date(e.detected_at).toLocaleString() : '—'}</td></tr>
-                  </tbody>
-                </table>
-                <button
-                  onclick="document.dispatchEvent(new CustomEvent('aeromesh-view-evidence'))"
-                  style="margin-top:8px;width:100%;padding:6px;font-size:11px;font-weight:600;color:#fff;background:#4f46e5;border:none;border-radius:8px;cursor:pointer;"
-                >
-                  View AI Analysis →
-                </button>
-              </div>
-            </Popup>
           </CircleMarker>
         ))}
+
 
         {/* Plume polygons as proper GeoJSON FeatureCollection */}
         {layers.plumes && plumeFeatures.length > 0 && (
