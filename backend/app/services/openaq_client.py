@@ -14,9 +14,10 @@ class OpenAQClient:
     def __init__(self):
         self.base_url = "https://api.openaq.org/v3"
         self.headers = {
-            "X-API-Key": settings.OPENAQ_API_KEY,
             "Accept": "application/json"
         }
+        if settings.OPENAQ_API_KEY:
+            self.headers["X-API-Key"] = settings.OPENAQ_API_KEY
         self.timeout = 10.0
 
     async def fetch_locations_in_bbox(self, bbox: str = "-180,-90,180,90", limit: int = 100):
@@ -25,10 +26,6 @@ class OpenAQClient:
         Format for bbox: minLon,minLat,maxLon,maxLat.
         Default fetches a broad list for testing.
         """
-        if not settings.OPENAQ_API_KEY:
-            logger.warning("OPENAQ_API_KEY not set. Cannot fetch locations.")
-            return
-
         url = f"{self.base_url}/locations"
         params = {
             "bbox": bbox,
@@ -78,10 +75,6 @@ class OpenAQClient:
         """
         Loops through sensors saved in the DB and fetches their latest measurements.
         """
-        if not settings.OPENAQ_API_KEY:
-            logger.warning("OPENAQ_API_KEY not set. Cannot sync measurements.")
-            return
-            
         db = SessionLocal()
         sensors = db.query(Sensor).filter(Sensor.provider == "openaq").all()
         db.close()
