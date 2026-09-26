@@ -7,6 +7,7 @@ import AlertPanel from './AlertPanel';
 import AIEvidencePanel from './AIEvidencePanel';
 import WindOverlay from './WindOverlay';
 import ForecastSlider from './ForecastSlider';
+import AQILegend from './AQILegend';
 import { useTheme } from '../hooks';
 
 // AQI level → map marker color (EPA standard)
@@ -262,6 +263,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       {/* HUD Overlays */}
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
       <KPIStrip stats={dynamicStats} />
+      <AQILegend isVisible={layers.sensors} />
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
       {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
       <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
