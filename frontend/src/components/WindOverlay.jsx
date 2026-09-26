@@ -24,43 +24,72 @@ const WindOverlay = ({ isVisible, windSpeed = 15, windDirection = 145 }) => {
     resize();
     map.on('resize', resize);
 
-    const particleCount = 120;
-    const angleRad = (windDirection - 90) * (Math.PI / 180);
-    const speed = windSpeed * 0.04;
+    const particleCount = 1000;
+    const baseSpeed = windSpeed * 0.05;
+    const baseAngle = (windDirection - 90) * (Math.PI / 180);
 
-    const particles = Array.from({ length: particleCount }, () => ({
+    // Initialize particles with a trail history
+    const createParticle = () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      len: Math.random() * 8 + 4,
-      opacity: Math.random() * 0.25 + 0.05,
-      life: Math.random() * 80,
-      maxLife: Math.random() * 80 + 40,
-    }));
+      history: [],
+      life: 0,
+      maxLife: Math.random() * 60 + 40,
+      speedVariant: Math.random() * 0.5 + 0.8, // 0.8 to 1.3
+      thickness: Math.random() * 1.2 + 0.3,
+    });
+
+    const particles = Array.from({ length: particleCount }, createParticle);
 
     const draw = () => {
-      // Clear fully — no semi-transparent fill that darkens the map
+      // Fully clear the canvas so map underneath isn't darkened
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.lineWidth = 1;
+
+      // We use a glowing white/blue aesthetic similar to zoom.earth
+      ctx.strokeStyle = 'rgba(180, 210, 255, 0.6)';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.beginPath();
 
       particles.forEach(p => {
-        const fade = Math.sin((p.life / p.maxLife) * Math.PI);
-        ctx.beginPath();
-        ctx.strokeStyle = `rgba(96, 165, 250, ${p.opacity * fade})`;
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x + Math.cos(angleRad) * p.len, p.y + Math.sin(angleRad) * p.len);
-        ctx.stroke();
+        // Add fake turbulence (curl) based on position so they swirl naturally
+        const turbulence = Math.sin(p.x * 0.005) * Math.cos(p.y * 0.005) * 0.8;
+        const currentAngle = baseAngle + turbulence;
+        
+        const vx = Math.cos(currentAngle) * baseSpeed * p.speedVariant;
+        const vy = Math.sin(currentAngle) * baseSpeed * p.speedVariant;
 
-        p.x += Math.cos(angleRad) * speed;
-        p.y += Math.sin(angleRad) * speed;
+        p.history.push({ x: p.x, y: p.y });
+        if (p.history.length > 15) { // Trail length
+          p.history.shift();
+        }
+
+        p.x += vx;
+        p.y += vy;
         p.life += 1;
 
+        // Draw trail for this particle
+        if (p.history.length > 1) {
+          // Opacity fades in and out based on life cycle
+          const fade = Math.sin((p.life / p.maxLife) * Math.PI);
+          ctx.globalAlpha = fade * 0.8;
+          ctx.lineWidth = p.thickness;
+          
+          ctx.moveTo(p.history[0].x, p.history[0].y);
+          for (let i = 1; i < p.history.length; i++) {
+            ctx.lineTo(p.history[i].x, p.history[i].y);
+          }
+        }
+
+        // Reset particle if it goes out of bounds or dies
         if (p.x > canvas.width || p.x < 0 || p.y > canvas.height || p.y < 0 || p.life >= p.maxLife) {
-          p.x = Math.random() * canvas.width;
-          p.y = Math.random() * canvas.height;
-          p.life = 0;
-          p.maxLife = Math.random() * 80 + 40;
+          Object.assign(p, createParticle());
         }
       });
+
+      ctx.stroke();
+      ctx.globalAlpha = 1.0; // Reset for next frame
 
       animationFrameId = requestAnimationFrame(draw);
     };
@@ -83,6 +112,7 @@ const WindOverlay = ({ isVisible, windSpeed = 15, windDirection = 145 }) => {
         inset: 0,
         pointerEvents: 'none',
         zIndex: 400,
+        mixBlendMode: 'screen' // Makes the glowing trails pop over dark maps
       }}
     />
   );

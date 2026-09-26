@@ -204,7 +204,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         <TileLayer url={labelUrl} noWrap={false} />
 
         {/* Sensor markers */}
-        {layers.sensors && filteredSensors.map(s => (
+        {layers.sensors && sensors.map(s => (
           <CircleMarker
             key={`sensor-${s.id}`}
             center={[s.lat, s.lon]}
@@ -243,7 +243,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         ))}
 
         {/* Fire event markers */}
-        {layers.fire && filteredEvents.map(e => (
+        {layers.fire && events.map(e => (
           <CircleMarker
             key={`event-${e.id}`}
             center={[e.lat, e.lon]}
@@ -287,7 +287,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         {/* Plume polygons as proper GeoJSON FeatureCollection */}
         {layers.plumes && plumeFeatures.length > 0 && (
           <GeoJSON
-            key={`plumes-${hoursForward}-${filteredEvents.length}`}
+            key={`plumes-${hoursForward}-${events.length}`}
             data={plumeGeoJSON}
             style={plumeStyle}
             onEachFeature={onEachPlumeFeature}
@@ -298,7 +298,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       {/* HUD Overlays */}
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
       <KPIStrip stats={dynamicStats} />
-      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={filteredEvents} />
+      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
       {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
       <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </div>
