@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Play, Pause, FastForward, Clock } from 'lucide-react';
 
-const ForecastSlider = () => {
+const ForecastSlider = ({ hoursForward, setHoursForward }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hoursForward, setHoursForward] = useState(0);
 
   const maxHours = 24;
 

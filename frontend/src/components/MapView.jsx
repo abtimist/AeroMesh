@@ -37,7 +37,7 @@ function MapController({ center, zoom }) {
 
 export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose }) {
   const [layers, setLayers] = useState({
-    sensors: true, plumes: true, fire: true, wind: true, corridors: true,
+    sensors: true, plumes: true, fire: true, wind: false, corridors: true,
   });
   
   const { dark } = useTheme();
@@ -110,6 +110,8 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     stationsOnline: sensors.length,
   };
 
+  const [hoursForward, setHoursForward] = useState(0);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0d1117]">
       <MapContainer
@@ -149,6 +151,22 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         ))}
 
         {events.map((e) => {
+          // Calculate an offset plume if forecast is active
+          // Wind usually moves west-to-east or based on vector. For demo, we just shift it horizontally and slightly vertically based on hours.
+          let displayPlume = e.plume_polygon;
+          if (displayPlume && displayPlume.coordinates && hoursForward > 0) {
+            const offsetLon = hoursForward * 0.05; // ~5km per hour shift east
+            const offsetLat = hoursForward * 0.01; // ~1km per hour shift north
+            const newCoords = displayPlume.coordinates[0].map(coord => [
+              coord[0] + offsetLon,
+              coord[1] + offsetLat
+            ]);
+            displayPlume = {
+              ...displayPlume,
+              coordinates: [newCoords]
+            };
+          }
+
           return (
             <div key={e.id || Math.random()}>
               {layers.fire && (
@@ -170,9 +188,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                   </Popup>
                 </CircleMarker>
               )}
-              {layers.plumes && e.plume_polygon && (
+              {layers.plumes && displayPlume && (
                 <GeoJSON 
-                  data={e.plume_polygon} 
+                  key={`${e.id}-${hoursForward}`}
+                  data={displayPlume} 
                   style={plumeStyle} 
                   onEachFeature={onEachPlumeFeature}
                 />
@@ -185,7 +204,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
       <KPIStrip stats={dynamicStats} />
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} />
-      {layers.plumes && <ForecastSlider />}
+      {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
       <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </div>
   );
