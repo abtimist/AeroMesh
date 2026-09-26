@@ -62,8 +62,7 @@ def get_plume_forecast(event_id: int) -> Dict[str, Any]:
         polygon = GaussianPlumeModel.generate_forecast(event, weather)
         
         # Save polygon to DB
-        from geoalchemy2.shape import from_shape
-        event.plume_polygon = from_shape(polygon, srid=4326)
+        event.plume_polygon = shapely.geometry.mapping(polygon)
         db.commit()
         
         # Convert to GeoJSON Feature

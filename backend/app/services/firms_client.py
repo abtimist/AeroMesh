@@ -3,8 +3,6 @@ import logging
 import csv
 import io
 from datetime import datetime, timezone
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -84,7 +82,7 @@ class NASA_FIRMSClient:
                 elif confidence == 'l':
                     conf_score = 30.0
                     
-                geom = from_shape(Point(lon, lat), srid=4326)
+                
                 
                 # Prevent exact duplicates (same location and time)
                 existing = db.query(PollutionEvent).filter(
@@ -97,7 +95,7 @@ class NASA_FIRMSClient:
                     event = PollutionEvent(
                         origin_country='IND', # Simplified for this demo
                         event_type='biomass_burning',
-                        centroid=geom,
+                        lat=lat, lon=lon,
                         severity=severity,
                         confidence_score=conf_score,
                         detected_at=dt,

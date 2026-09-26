@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Index
-from geoalchemy2 import Geometry
+from sqlalchemy import Column, JSON, Integer, String, Boolean, JSON, Index
 
 from app.db.base_class import Base
 
@@ -14,6 +13,6 @@ class InspectorJurisdiction(Base):
     whatsapp_id = Column(String(64), nullable=True)
     
     # The geographical boundaries of their jurisdiction
-    assigned_zone = Column(Geometry(geometry_type='POLYGON', srid=4326), nullable=False)
+    assigned_zone = Column(JSON, nullable=False)
     
     active_status = Column(Boolean, default=True, index=True)

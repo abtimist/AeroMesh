@@ -23,7 +23,7 @@ const AIEvidencePanel = ({ event, onClose }) => {
           </div>
           <div>
             <h3 className="font-semibold text-white tracking-wide text-sm">LAYA DECISION ENGINE</h3>
-            <p className="text-xs text-blue-300/80 font-mono">ID: {event.event_id}</p>
+            <p className="text-xs text-blue-300/80 font-mono">ID: {event.id || event.event_id}</p>
           </div>
         </div>
         <button 

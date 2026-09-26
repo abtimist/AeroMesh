@@ -7,7 +7,6 @@ import datetime
 from app.db.session import SessionLocal
 from app.models.sensor import Sensor, Measurement
 from app.models.event import PollutionEvent
-from geoalchemy2.shape import to_shape
 import shapely.geometry
 
 router = APIRouter()
@@ -34,7 +33,7 @@ def get_sensors(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
                 .order_by(Measurement.timestamp.desc())\
                 .first()
             
-            geom = to_shape(s.location)
+            geom = None # location is lat/lon
             
             # Simple AQI level mapping based on PM2.5
             pm25 = latest_meas.value if latest_meas else 0
@@ -49,8 +48,8 @@ def get_sensors(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
                 "id": s.id,
                 "provider_id": s.provider_id,
                 "name": s.name,
-                "lat": geom.y,
-                "lon": geom.x,
+                "lat": s.lat,
+                "lon": s.lon,
                 "pm25": pm25,
                 "aqiLevel": aqiLevel,
                 "location": s.name,
@@ -69,19 +68,19 @@ def get_events(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
         events = db.query(PollutionEvent).filter(PollutionEvent.status == 'ACTIVE').order_by(PollutionEvent.detected_at.desc()).all()
         result = []
         for e in events:
-            centroid = to_shape(e.centroid)
+            centroid = None
             plume_geojson = None
             if e.plume_polygon:
-                plume_shape = to_shape(e.plume_polygon)
-                plume_geojson = shapely.geometry.mapping(plume_shape)
+                plume_shape = None
+                plume_geojson = e.plume_polygon
             
             result.append({
                 "id": e.id,
                 "event_type": e.event_type,
                 "severity": e.severity,
                 "confidence": e.confidence_score,
-                "lat": centroid.y,
-                "lon": centroid.x,
+                "lat": e.lat,
+                "lon": e.lon,
                 "detected_at": e.detected_at.isoformat(),
                 "plume_polygon": plume_geojson,
                 "predicted_vector_deg": e.predicted_vector_deg

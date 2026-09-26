@@ -3,7 +3,6 @@ from typing import List, Tuple
 from shapely.geometry import Polygon
 from app.models.event import PollutionEvent
 from app.models.weather import WeatherLog
-from geoalchemy2.shape import to_shape
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,7 +79,7 @@ class GaussianPlumeModel:
         """
         Takes database model instances and returns the Shapely polygon geometry.
         """
-        source_pt = to_shape(event.centroid)
+        
         
         # Default fallback values if weather is missing
         wind_speed = weather.wind_speed_ms if weather else 5.0
@@ -95,8 +94,8 @@ class GaussianPlumeModel:
             dist_km = 60.0
             
         return GaussianPlumeModel.calculate_plume_polygon(
-            source_lat=source_pt.y,
-            source_lon=source_pt.x,
+            source_lat=event.lat,
+            source_lon=event.lon,
             wind_speed_ms=wind_speed,
             wind_dir_deg=wind_dir,
             pblh=pblh,

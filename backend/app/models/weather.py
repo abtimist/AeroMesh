@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, Float, DateTime, Index
-from geoalchemy2 import Geometry
 
 from app.db.base_class import Base
 
@@ -9,7 +8,8 @@ class WeatherLog(Base):
     Mapped to Open-Meteo hourly response.
     """
     id = Column(Integer, primary_key=True, index=True)
-    location = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
+    lat = Column(Float, nullable=False)
+    lon = Column(Float, nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     
     # Weather Vectors

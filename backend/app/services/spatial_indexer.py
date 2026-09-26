@@ -1,81 +1,57 @@
-from sqlalchemy import func
-from geoalchemy2.functions import ST_DistanceSphere
-
+import math
 from app.db.session import SessionLocal
 from app.models.sensor import Sensor
 from app.models.event import PollutionEvent
 
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000  # radius of Earth in meters
+    phi_1 = math.radians(lat1)
+    phi_2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
 class SpatialIndexer:
     @staticmethod
-    def get_hotspots_near_sensor(sensor_id: int, radius_meters: float = 50000.0, limit: int = 10):
-        """
-        Uses PostGIS ST_DistanceSphere to find active NASA FIRMS fire hotspots 
-        within `radius_meters` of a specific sensor.
-        """
+    def get_sensors_near_hotspot(event_id: int, radius_meters: float = 50000):
         db = SessionLocal()
         try:
-            sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
-            if not sensor:
-                return []
-                
-            # Query active pollution events (hotspots)
-            # ST_DistanceSphere calculates distance in meters on the Earth's surface
-            hotspots = db.query(
-                PollutionEvent,
-                ST_DistanceSphere(PollutionEvent.centroid, sensor.location).label('distance')
-            ).filter(
-                PollutionEvent.status == 'ACTIVE',
-                ST_DistanceSphere(PollutionEvent.centroid, sensor.location) <= radius_meters
-            ).order_by('distance').limit(limit).all()
+            event = db.query(PollutionEvent).filter(PollutionEvent.id == event_id).first()
+            if not event: return []
             
-            result = []
-            for event, distance in hotspots:
-                result.append({
-                    "event_id": event.id,
-                    "event_type": event.event_type,
-                    "severity": event.severity,
-                    "distance_meters": distance,
-                    "detected_at": event.detected_at.isoformat()
-                })
-            return result
-            
-        except Exception as e:
-            db.rollback()
-            raise e
+            sensors = db.query(Sensor).all()
+            nearby = []
+            for s in sensors:
+                dist = haversine(event.lat, event.lon, s.lat, s.lon)
+                if dist <= radius_meters:
+                    nearby.append({
+                        "sensor_id": s.id,
+                        "location": s.location_name,
+                        "distance_meters": dist
+                    })
+            return nearby
         finally:
             db.close()
             
     @staticmethod
-    def get_sensors_near_hotspot(event_id: int, radius_meters: float = 50000.0):
-        """
-        Finds all ground sensors within a certain radius of a specific fire hotspot.
-        Useful for determining which sensors should be tracking a plume.
-        """
+    def get_hotspots_near_sensor(sensor_id: int, radius_meters: float = 50000):
         db = SessionLocal()
         try:
-            event = db.query(PollutionEvent).filter(PollutionEvent.id == event_id).first()
-            if not event:
-                return []
-                
-            sensors = db.query(
-                Sensor,
-                ST_DistanceSphere(Sensor.location, event.centroid).label('distance')
-            ).filter(
-                ST_DistanceSphere(Sensor.location, event.centroid) <= radius_meters
-            ).order_by('distance').all()
+            sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
+            if not sensor: return []
             
-            result = []
-            for sensor, distance in sensors:
-                result.append({
-                    "sensor_id": sensor.id,
-                    "provider": sensor.provider,
-                    "name": sensor.name,
-                    "distance_meters": distance
-                })
-            return result
-            
-        except Exception as e:
-            db.rollback()
-            raise e
+            events = db.query(PollutionEvent).all()
+            nearby = []
+            for e in events:
+                dist = haversine(sensor.lat, sensor.lon, e.lat, e.lon)
+                if dist <= radius_meters:
+                    nearby.append({
+                        "event_id": e.id,
+                        "severity": e.severity,
+                        "distance_meters": dist
+                    })
+            return nearby
         finally:
             db.close()

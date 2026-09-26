@@ -3,7 +3,6 @@ from typing import Dict, Any
 from app.db.session import SessionLocal
 from app.models.event import PollutionEvent
 from shapely.geometry import mapping
-from geoalchemy2.shape import to_shape
 
 class Sentinel5PMockParser:
     @staticmethod
@@ -19,7 +18,7 @@ class Sentinel5PMockParser:
                 return {"type": "FeatureCollection", "features": []}
                 
             # Convert PostGIS geometry to Shapely Point
-            centroid = to_shape(event.centroid)
+            
             
             features = []
             
@@ -40,8 +39,8 @@ class Sentinel5PMockParser:
                 
                 # Mock a plume by shifting the center slightly (simulating wind effect)
                 # In a real model, we'd use Gaussian Plume. Here we just shift the center east.
-                shift_lon = centroid.x + (radius * 0.5)
-                shift_lat = centroid.y
+                shift_lon = event.lon + (radius * 0.5)
+                shift_lat = event.lat
                 
                 from shapely.geometry import Point
                 plume_poly = Point(shift_lon, shift_lat).buffer(radius)

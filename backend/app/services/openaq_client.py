@@ -1,8 +1,6 @@
 import httpx
 import logging
 from datetime import datetime, timezone
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -56,11 +54,11 @@ class OpenAQClient:
                 
                 existing = db.query(Sensor).filter(Sensor.provider_id == provider_id).first()
                 if not existing:
-                    geom = from_shape(Point(lon, lat), srid=4326)
+                    
                     sensor = Sensor(
                         provider_id=provider_id,
                         name=loc.get('name', 'Unknown Station'),
-                        location=geom,
+                        lat=lat, lon=lon,
                         provider="openaq"
                     )
                     db.add(sensor)

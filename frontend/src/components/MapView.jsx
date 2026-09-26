@@ -10,63 +10,21 @@ import ForecastSlider from './ForecastSlider';
 import { useTheme } from '../hooks';
 
 // AQI level → map marker color
-const AQI_COLORS = {
-  GOOD: '#00e400', MODERATE: '#ffff00', USG: '#ff7e00',
-  UNHEALTHY: '#ff0000', VERY_UNHEALTHY: '#8f3f97', HAZARDOUS: '#7e0023',
+const getSensorColor = (pm25) => {
+  if (!pm25) return '#999';
+  if (pm25 <= 12) return '#00e400'; // GOOD
+  if (pm25 <= 35.4) return '#ffff00'; // MODERATE
+  if (pm25 <= 55.4) return '#ff7e00'; // USG
+  if (pm25 <= 150.4) return '#ff0000'; // UNHEALTHY
+  if (pm25 <= 250.4) return '#8f3f97'; // VERY_UNHEALTHY
+  return '#7e0023'; // HAZARDOUS
 };
-
-// Realistic mock sensor data fallback
-const MOCK_SENSORS = [
-  { id: 1, lat: 28.522, lon: 77.275, pm25: 452, aqiLevel: 'HAZARDOUS',      location: 'Delhi (Okhla Phase 2)' },
-  { id: 2, lat: 28.554, lon: 77.300, pm25: 395, aqiLevel: 'HAZARDOUS',      location: 'Noida (Sec 125)' },
-  { id: 3, lat: 28.631, lon: 77.216, pm25: 215, aqiLevel: 'VERY_UNHEALTHY', location: 'Delhi (Connaught Place)' },
-  { id: 4, lat: 28.704, lon: 77.102, pm25: 185, aqiLevel: 'UNHEALTHY',      location: 'Delhi (Rohini)' },
-  { id: 5, lat: 28.459, lon: 77.026, pm25: 156, aqiLevel: 'USG',            location: 'Gurugram (Cyber City)' },
-  { id: 6, lat: 28.669, lon: 77.453, pm25: 420, aqiLevel: 'HAZARDOUS',      location: 'Ghaziabad (Loni)' },
-  { id: 7, lat: 29.390, lon: 76.970, pm25: 265, aqiLevel: 'VERY_UNHEALTHY', location: 'Haryana (Panipat)' },
-  { id: 8, lat: 28.800, lon: 77.300, pm25: 145, aqiLevel: 'UNHEALTHY',      location: 'Delhi (Narela)' },
-];
-
-const MOCK_PLUME = {
-  type: 'Feature',
-  properties: { severity: 'CRITICAL', event_id: 9942 },
-  geometry: {
-    type: 'Polygon',
-    coordinates: [[
-      [77.275, 28.522], [77.320, 28.550], [77.400, 28.510],
-      [77.350, 28.450], [77.260, 28.490], [77.275, 28.522],
-    ]],
-  },
-};
-
-const MOCK_FIRE = { lat: 29.390, lon: 76.970 };
 
 const NODE_CONFIG = {
-  'India Node': { center: [28.6139, 77.209], zoom: 6, sensors: MOCK_SENSORS, plume: MOCK_PLUME, fire: MOCK_FIRE },
-  'Brazil Node': { 
-    center: [-23.5505, -46.6333], zoom: 6, 
-    sensors: [
-      { id: 101, lat: -23.5505, lon: -46.6333, pm25: 145, aqiLevel: 'UNHEALTHY', location: 'São Paulo (Centro)' },
-      { id: 102, lat: -23.58, lon: -46.68, pm25: 210, aqiLevel: 'VERY_UNHEALTHY', location: 'Pinheiros' }
-    ],
-    plume: null, fire: { lat: -23.6, lon: -46.5 }
-  },
-  'China Node': {
-    center: [39.9042, 116.4074], zoom: 6,
-    sensors: [
-      { id: 201, lat: 39.9042, lon: 116.4074, pm25: 280, aqiLevel: 'VERY_UNHEALTHY', location: 'Beijing (Dongcheng)' },
-      { id: 202, lat: 39.95, lon: 116.3, pm25: 190, aqiLevel: 'UNHEALTHY', location: 'Haidian' }
-    ],
-    plume: null, fire: null
-  },
-  'South Africa Node': {
-    center: [-26.2041, 28.0473], zoom: 8,
-    sensors: [
-      { id: 301, lat: -26.2041, lon: 28.0473, pm25: 85, aqiLevel: 'MODERATE', location: 'Johannesburg (CBD)' },
-      { id: 302, lat: -26.1, lon: 28.1, pm25: 110, aqiLevel: 'USG', location: 'Sandton' }
-    ],
-    plume: null, fire: null
-  }
+  'India Node': { center: [28.6139, 77.209], zoom: 6 },
+  'Brazil Node': { center: [-23.5505, -46.6333], zoom: 6 },
+  'China Node': { center: [39.9042, 116.4074], zoom: 6 },
+  'South Africa Node': { center: [-26.2041, 28.0473], zoom: 8 }
 };
 
 function MapController({ center, zoom }) {
@@ -83,7 +41,6 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   });
   
   const { dark } = useTheme();
-
   const [sensors, setSensors] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,50 +54,23 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           fetch('http://localhost:8000/api/data/events').catch(() => null)
         ]);
 
-        let fetchedSensors = [];
-        let fetchedEvents = [];
-
-        if (sensorRes && sensorRes.ok) fetchedSensors = await sensorRes.json();
-        if (eventRes && eventRes.ok) fetchedEvents = await eventRes.json();
-
-        const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
-        
-        // Fallback to mock data if DB is empty or API is down (for demo purposes)
-        if (fetchedSensors.length === 0) {
-          setSensors(config.sensors);
-        } else {
-          setSensors(fetchedSensors);
+        if (sensorRes && sensorRes.ok) {
+          const data = await sensorRes.json();
+          setSensors(data);
         }
-
-        if (fetchedEvents.length === 0) {
-          if (config.fire) {
-            setEvents([{ type: 'mock_fire', lat: config.fire.lat, lon: config.fire.lon }]);
-          } else {
-            setEvents([]);
-          }
-        } else {
-          setEvents(fetchedEvents);
+        if (eventRes && eventRes.ok) {
+          const data = await eventRes.json();
+          setEvents(data);
         }
       } catch (err) {
-        console.error("Failed to fetch map data", err);
-        const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
-        setSensors(config.sensors);
-        if (config.fire) {
-          setEvents([{ type: 'mock_fire', lat: config.fire.lat, lon: config.fire.lon }]);
-        } else {
-          setEvents([]);
-        }
+        console.error("Failed to fetch real map data", err);
       } finally {
         setLoading(false);
       }
     }
     
-    // Initial fetch
     fetchData();
-    
-    // Poll every 10 seconds for real-time live data
     const intervalId = setInterval(fetchData, 10000);
-    
     return () => clearInterval(intervalId);
   }, [activeNode]);
 
@@ -165,14 +95,23 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     }
   };
 
+  // Premium CartoDB Maps
   const tileUrl = dark 
-    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
 
+  // Calculate real stats for KPI strip
+  const dynamicStats = {
+    activeEvents: events.length,
+    pm25Peak: sensors.length > 0 ? Math.max(...sensors.map(s => s.pm25 || 0)).toFixed(1) : 0,
+    wind: '18 km/h NW',
+    stationsOnline: sensors.length,
+  };
+
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden bg-[#0d1117]">
       <MapContainer
         center={currentConfig.center}
         zoom={currentConfig.zoom}
@@ -186,71 +125,36 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         
         <TileLayer
           url={tileUrl}
-          attribution='Esri, HERE, Garmin, FAO, NOAA, USGS, EPA'
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         />
 
-        {/* Real or Mock Sensors */}
         {layers.sensors && sensors.map(s => (
           <CircleMarker
-            key={s.id}
+            key={s.id || s.name}
             center={[s.lat, s.lon]}
-            radius={8}
+            radius={6}
             pathOptions={{
-              fillColor: AQI_COLORS[s.aqiLevel] || '#999',
+              fillColor: getSensorColor(s.pm25),
               fillOpacity: 0.9,
               color: dark ? '#131920' : '#ffffff',
-              weight: 2,
+              weight: 1.5,
             }}
           >
             <Popup>
               <div className="text-sm font-medium">{s.location || s.name}</div>
               <div className="text-xs text-slate-500">PM2.5: {s.pm25} µg/m³</div>
+              <div className="text-[10px] text-slate-400">Source: {s.provider}</div>
             </Popup>
           </CircleMarker>
         ))}
 
-        {/* Real or Mock Plumes & Fires */}
-        {events.map((e, idx) => {
-          if (e.type === 'mock_fire') {
-            return (
-              <div key="mock-event">
-                {layers.fire && (
-                  <CircleMarker
-                    center={[e.lat, e.lon]}
-                    radius={12}
-                    pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
-                    eventHandlers={{ click: () => setSelectedEvidence({ event_id: 9942, confidence_score: 92.5, severity: 'CRITICAL', event_type: 'Biomass Burning' }) }}
-                  >
-                    <Popup>
-                      <div className="text-sm font-medium">🔥 Active Fire Hotspot (Stubble)</div>
-                      <div className="text-xs text-slate-500">NASA FIRMS (VIIRS) · Confidence: 88%</div>
-                      <button 
-                        onClick={() => setSelectedEvidence({ event_id: 9942, confidence_score: 92.5, severity: 'CRITICAL', event_type: 'Biomass Burning' })}
-                        className="mt-2 text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 w-full"
-                      >
-                        View AI Analysis
-                      </button>
-                    </Popup>
-                  </CircleMarker>
-                )}
-                {layers.plumes && currentConfig.plume && (
-                  <GeoJSON 
-                    data={currentConfig.plume} 
-                    style={plumeStyle} 
-                    onEachFeature={onEachPlumeFeature} 
-                  />
-                )}
-              </div>
-            );
-          }
-
-          // Real Event rendering
+        {events.map((e) => {
           return (
-            <div key={e.id}>
+            <div key={e.id || Math.random()}>
               {layers.fire && (
                 <CircleMarker
                   center={[e.lat, e.lon]}
-                  radius={12}
+                  radius={10}
                   pathOptions={{ fillColor: '#ff4500', fillOpacity: 0.9, color: dark ? '#131920' : '#ffffff', weight: 2 }}
                   eventHandlers={{ click: () => setSelectedEvidence(e) }}
                 >
@@ -279,7 +183,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       </MapContainer>
 
       <LayerControl activeLayers={layers} onToggle={toggleLayer} />
-      <KPIStrip />
+      <KPIStrip stats={dynamicStats} />
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} />
       {layers.plumes && <ForecastSlider />}
       <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />

@@ -1,8 +1,6 @@
 import httpx
 import logging
 from datetime import datetime, timezone
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -60,7 +58,7 @@ class OpenMeteoClient:
                     pblh = pblhs[i]
                     
                     if ws is not None and wd is not None and pblh is not None:
-                        geom = from_shape(Point(lon, lat), srid=4326)
+                        
                         
                         existing = db.query(WeatherLog).filter(
                             WeatherLog.timestamp == dt
@@ -69,7 +67,7 @@ class OpenMeteoClient:
                         
                         if not existing:
                             wlog = WeatherLog(
-                                location=geom,
+                                lat=lat, lon=lon,
                                 timestamp=dt,
                                 wind_speed=float(ws),
                                 wind_direction=float(wd),

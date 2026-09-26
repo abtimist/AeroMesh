@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Index
-from geoalchemy2 import Geometry
+from sqlalchemy import Column, JSON, Integer, String, Float, DateTime, Index
 
 from app.db.base_class import Base
 
@@ -13,7 +12,8 @@ class PollutionEvent(Base):
     event_type = Column(String(64), nullable=False) # e.g., 'biomass_burning', 'industrial_emission'
     
     # Core hotspot location
-    centroid = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
+    lat = Column(Float, nullable=False)
+    lon = Column(Float, nullable=False)
     
     # Metadata
     severity = Column(String(16), nullable=False, index=True) # 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
@@ -21,7 +21,7 @@ class PollutionEvent(Base):
     detected_at = Column(DateTime(timezone=True), nullable=False, index=True)
     
     # Plume Dispersion
-    plume_polygon = Column(Geometry(geometry_type='POLYGON', srid=4326), nullable=True)
+    plume_polygon = Column(JSON, nullable=True)
     predicted_vector_deg = Column(Float, nullable=True)
     
     status = Column(String(32), default='ACTIVE', index=True) # 'ACTIVE', 'MITIGATED', 'RESOLVED'

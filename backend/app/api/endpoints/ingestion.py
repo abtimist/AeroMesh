@@ -10,7 +10,6 @@ from app.models.weather import WeatherLog
 from app.services.vision_model import vision_engine
 from app.services.plume_model import GaussianPlumeModel
 from app.services.fusion_engine import EvidenceFusionEngine
-from geoalchemy2.shape import from_shape
 from datetime import datetime, timezone
 import asyncio
 import shutil
@@ -124,7 +123,7 @@ async def submit_citizen_report(
             # Generate Plume
             weather = db.query(WeatherLog).order_by(WeatherLog.timestamp.desc()).first()
             plume_poly = GaussianPlumeModel.generate_forecast(event, weather)
-            event.plume_polygon = from_shape(plume_poly, srid=4326)
+            event.plume_polygon = shapely.geometry.mapping(plume_poly) if plume_poly else None
             
             # Link report
             report.linked_event_id = event.id

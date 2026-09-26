@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
-from geoalchemy2 import Geometry
 
 from app.db.base_class import Base
 
@@ -12,7 +11,8 @@ class Sensor(Base):
     # The OpenAQ location ID or custom ID
     provider_id = Column(String(64), unique=True, index=True, nullable=False)
     name = Column(String(255), nullable=False)
-    location = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
+    lat = Column(Float, nullable=False)
+    lon = Column(Float, nullable=False)
     provider = Column(String(64), nullable=False) # e.g., 'openaq', 'cpcb'
     
     measurements = relationship("Measurement", back_populates="sensor", cascade="all, delete-orphan")
