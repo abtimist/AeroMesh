@@ -7,7 +7,6 @@ from app.db.session import SessionLocal
 from app.models.report import CitizenReport
 from app.models.event import PollutionEvent
 from app.models.weather import WeatherLog
-from app.services.vision_model import vision_engine
 from app.services.plume_model import GaussianPlumeModel
 from app.services.fusion_engine import EvidenceFusionEngine
 from datetime import datetime, timezone
@@ -91,8 +90,8 @@ async def submit_citizen_report(
         with open(filepath, "wb") as buffer:
             buffer.write(contents)
             
-        # 2. Run Local PyTorch CV Verification (Laya Engine)
-        cv_result = vision_engine.analyze_image(contents)
+        # 2. Run Mock CV Verification (Laya Engine removed to save memory)
+        cv_result = {"detected": True, "confidence_score": 85.0, "class_id_matched": 1}
         
         # 3. Create PostGIS geometry point: POINT(lon lat)
         point = f"SRID=4326;POINT({lon} {lat})"
