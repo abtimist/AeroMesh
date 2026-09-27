@@ -2,9 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap, useMapEvents, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import AlertPanel from './AlertPanel';
-import AIEvidencePanel from './AIEvidencePanel';
 import WindVelocityLayer from './WindVelocityLayer';
-import ForecastSlider from './ForecastSlider';
 import AQILegend from './AQILegend';
 import LocateButton from './LocateButton';
 import MeasureTool from './MeasureTool';
@@ -89,13 +87,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
 
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const plumeStyle = {
-    fillColor: '#ef4444',
-    fillOpacity: 0.35,
-    color: 'transparent',
-    opacity: 0,
-    weight: 0
-  };
+
 
   // Esri World Imagery (Satellite view)
   const tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
@@ -155,54 +147,6 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     };
   }, [filteredSensors, filteredEvents]);
 
-  // Build GeoJSON features with properties so popups work
-  const plumeFeatures = useMemo(() => {
-    return filteredEvents
-      .filter(e => e.plume_polygon && e.plume_polygon.coordinates)
-      .map(e => {
-        let coords = e.plume_polygon.coordinates;
-        // Apply forecast time offset
-        if (hoursForward > 0 && coords[0]) {
-          const offsetLon = hoursForward * 0.04;
-          const offsetLat = hoursForward * 0.008;
-          coords = [coords[0].map(c => [c[0] + offsetLon, c[1] + offsetLat])];
-        }
-        return {
-          type: 'Feature',
-          properties: {
-            id: e.id,
-            severity: e.severity,
-            event_type: e.event_type,
-            confidence: e.confidence,
-          },
-          geometry: {
-            type: e.plume_polygon.type || 'Polygon',
-            coordinates: coords,
-          },
-        };
-      });
-  }, [filteredEvents, hoursForward]);
-
-  const plumeGeoJSON = useMemo(() => ({
-    type: 'FeatureCollection',
-    features: plumeFeatures,
-  }), [plumeFeatures]);
-
-  const onEachPlumeFeature = (feature, layer) => {
-    const p = feature.properties || {};
-    layer.bindTooltip(
-      `<div style="font-family:Inter,sans-serif; text-align:left;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:2px;color:#fff;">Plume Forecast</div>
-        <div style="font-size:11px;color:#cbd5e1;">
-          Severity: <strong style="color:#f87171;">${p.severity || 'N/A'}</strong><br/>
-          T+${hoursForward}h Dispersion
-        </div>
-      </div>`,
-      { sticky: true, className: 'dark-tooltip', opacity: 0.95 }
-    );
-    layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.45 }));
-    layer.on('mouseout', () => layer.setStyle(plumeStyle));
-  };
 
   const handleMapClick = async (latlng) => {
     if (!inspectMode) return;
@@ -310,17 +254,6 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         ))}
 
 
-        {/* Plume polygons as proper GeoJSON FeatureCollection */}
-        {layers.plumes && plumeFeatures.length > 0 && (
-          <GeoJSON
-            key={`plumes-${hoursForward}-${events.length}`}
-            data={plumeGeoJSON}
-            style={plumeStyle}
-            onEachFeature={onEachPlumeFeature}
-          />
-        )}
-
-
         <MeasureTool isActive={measureMode} />
         <LocateButton />
         <MapClickListener onMapClick={handleMapClick} />
@@ -394,8 +327,6 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       {/* HUD Overlays */}
       <AQILegend isVisible={layers.sensors} />
       <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
-      {layers.plumes && <ForecastSlider hoursForward={hoursForward} setHoursForward={setHoursForward} />}
-      <AIEvidencePanel event={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </div>
   );
 }

@@ -6,7 +6,6 @@ const NODES = ['India Node', 'Brazil Node', 'China Node', 'South Africa Node'];
 
 const LAYERS = [
   { key: 'sensors',    label: 'Sensors',    icon: Activity, shortcut: 'S', color: '#22c55e' },
-  { key: 'plumes',     label: 'Plumes',     icon: Cloud,    shortcut: 'P', color: '#ef4444' },
   { key: 'fire',       label: 'Fire Spots', icon: Flame,    shortcut: 'F', color: '#f97316' },
   { key: 'wind',       label: 'Wind',       icon: Wind,     shortcut: 'W', color: '#60a5fa' },
 ];

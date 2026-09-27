@@ -7,7 +7,7 @@ from app.db.session import SessionLocal
 from app.models.report import CitizenReport
 from app.models.event import PollutionEvent
 from app.models.weather import WeatherLog
-from app.services.plume_model import GaussianPlumeModel
+
 from app.services.fusion_engine import EvidenceFusionEngine
 from datetime import datetime, timezone
 import asyncio
@@ -120,10 +120,8 @@ async def submit_citizen_report(
             db.add(event)
             db.flush()
             
-            # Generate Plume
-            weather = db.query(WeatherLog).order_by(WeatherLog.timestamp.desc()).first()
-            plume_poly = GaussianPlumeModel.generate_forecast(event, weather)
-            event.plume_polygon = shapely.geometry.mapping(plume_poly) if plume_poly else None
+            # Fake Plume generation has been removed
+            event.plume_polygon = None
             
             # Link report
             report.linked_event_id = event.id

@@ -15,7 +15,7 @@ export default function DashboardPage({ activeNode, setActiveNode, initialPanel 
   
   // Lift layers state up so Sidebar can control overlays
   const [layers, setLayers] = useState({
-    sensors: true, plumes: true, fire: true, wind: false, corridors: false,
+    sensors: true, fire: true, wind: false, corridors: false,
   });
   const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
 
