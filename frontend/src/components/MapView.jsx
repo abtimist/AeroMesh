@@ -81,7 +81,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
       }
     }
     fetchData();
-    const intervalId = setInterval(fetchData, 10000);
+    const intervalId = setInterval(fetchData, 60000);
     return () => clearInterval(intervalId);
   }, [activeNode]);
 

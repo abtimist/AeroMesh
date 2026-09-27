@@ -25,13 +25,24 @@ def get_sensors(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
     """
     try:
         sensors = db.query(Sensor).all()
+        
+        # Optimize N+1 query: fetch latest pm25 measurements for all sensors in one go
+        subq = db.query(
+            Measurement.sensor_id,
+            func.max(Measurement.timestamp).label('max_ts')
+        ).filter(Measurement.parameter == 'pm25').group_by(Measurement.sensor_id).subquery()
+        
+        latest_measurements = db.query(Measurement).join(
+            subq,
+            (Measurement.sensor_id == subq.c.sensor_id) & 
+            (Measurement.timestamp == subq.c.max_ts)
+        ).filter(Measurement.parameter == 'pm25').all()
+        
+        meas_dict = {m.sensor_id: m for m in latest_measurements}
+        
         result = []
         for s in sensors:
-            # Get latest pm2.5 measurement
-            latest_meas = db.query(Measurement)\
-                .filter(Measurement.sensor_id == s.id, Measurement.parameter == 'pm25')\
-                .order_by(Measurement.timestamp.desc())\
-                .first()
+            latest_meas = meas_dict.get(s.id)
             
             geom = None # location is lat/lon
             
