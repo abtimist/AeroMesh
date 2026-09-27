@@ -1,83 +1,38 @@
-import httpx
-import logging
+"""Retain provider forecasts by location and UTC valid time, in m/s."""
+import asyncio
 from datetime import datetime, timezone
-
+import httpx
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.weather import WeatherLog
 
-logger = logging.getLogger(__name__)
-
 class OpenMeteoClient:
-    def __init__(self):
-        self.base_url = settings.OPEN_METEO_BASE_URL
-        self.timeout = 10.0
-
     async def fetch_weather_vectors(self, lat: float, lon: float):
-        """
-        Calls Open-Meteo's hourly forecast endpoint for wind and boundary layer height.
-        """
-        url = f"{self.base_url}/forecast"
-        params = {
-            "latitude": lat,
-            "longitude": lon,
-            "hourly": "wind_speed_10m,wind_direction_10m,boundary_layer_height",
-            "timezone": "UTC"
-        }
-        
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url, params=params, timeout=self.timeout)
-                response.raise_for_status()
-                data = response.json()
-                self._save_weather_log(lat, lon, data)
-            except Exception as e:
-                logger.error(f"Error fetching Open-Meteo data for {lat},{lon}: {e}")
+        params = {"latitude": lat, "longitude": lon,
+                  "hourly": "wind_speed_10m,wind_direction_10m,boundary_layer_height",
+                  "wind_speed_unit": "ms", "timezone": "UTC", "forecast_days": 3}
+        if settings.OPEN_METEO_API_KEY:
+            params["apikey"] = settings.OPEN_METEO_API_KEY
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.get(settings.OPEN_METEO_BASE_URL + "/forecast", params=params)
+            response.raise_for_status()
+            await asyncio.to_thread(self._save_weather_log, lat, lon, response.json())
 
-    def _save_weather_log(self, lat: float, lon: float, data: dict):
-        hourly = data.get('hourly', {})
-        times = hourly.get('time', [])
-        wind_speeds = hourly.get('wind_speed_10m', [])
-        wind_directions = hourly.get('wind_direction_10m', [])
-        pblhs = hourly.get('boundary_layer_height', [])
-        
-        if not times:
-            return
-
-        db = SessionLocal()
-        try:
-            # We just take the most recent hour (or the current hour)
-            # Open-Meteo returns a forecast block, let's grab the current UTC hour index
-            current_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-            
-            for i, ts_str in enumerate(times):
-                dt = datetime.fromisoformat(ts_str).replace(tzinfo=timezone.utc)
-                if dt == current_utc:
-                    ws = wind_speeds[i]
-                    wd = wind_directions[i]
-                    pblh = pblhs[i]
-                    
-                    if ws is not None and wd is not None and pblh is not None:
-                        
-                        
-                        existing = db.query(WeatherLog).filter(
-                            WeatherLog.timestamp == dt
-                            # In production, we'd filter by exact geometry ST_Equals or similar
-                        ).first()
-                        
-                        if not existing:
-                            wlog = WeatherLog(
-                                lat=lat, lon=lon,
-                                timestamp=dt,
-                                wind_speed=float(ws),
-                                wind_direction=float(wd),
-                                pblh=float(pblh)
-                            )
-                            db.add(wlog)
-                            db.commit()
-                    break
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Database error saving weather log: {e}")
-        finally:
-            db.close()
+    def _save_weather_log(self, lat, lon, data):
+        hourly = data.get("hourly", {})
+        with SessionLocal() as db:
+            existing = {r.timestamp.replace(tzinfo=timezone.utc): r for r in db.query(WeatherLog).filter(
+                WeatherLog.lat == lat, WeatherLog.lon == lon).all()}
+            for i, value in enumerate(hourly.get("time", [])):
+                timestamp = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+                speed = hourly["wind_speed_10m"][i]
+                direction = hourly["wind_direction_10m"][i]
+                pblh = hourly["boundary_layer_height"][i]
+                if speed is None or direction is None or pblh is None:
+                    continue
+                row = existing.get(timestamp)
+                if row is None:
+                    row = WeatherLog(lat=lat, lon=lon, timestamp=timestamp)
+                    db.add(row)
+                row.wind_speed, row.wind_direction, row.pblh = speed, direction, pblh
+            db.commit()

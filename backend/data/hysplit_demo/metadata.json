@@ -1,0 +1,132 @@
+{
+  "id": "noaa-rsmc-2019",
+  "title": "HYSPLIT simulation — demonstration mode",
+  "mode": "precomputed_historical",
+  "model": "NOAA HYSPLIT",
+  "source_url": "https://raw.githubusercontent.com/noaa-oar-arl/hysplitplot/5f91ceb498ebfcf2bc5409db06cf4e349d3623b0/tests/data/rsmc.cdump2",
+  "source_commit": "5f91ceb498ebfcf2bc5409db06cf4e349d3623b0",
+  "source_sha256": "f474e0cb65b2d84db2f3889211634e22ccf392f0e48c07a6f5e484356332a702",
+  "reader_commit": "7a76e96a4911e91077b052251e1b5665b5306fc4",
+  "meteorology": "GFSQ",
+  "meteorology_start": "2019-07-14T06:00:00+00:00",
+  "source_location": {
+    "lat": -34.04999923706055,
+    "lon": 150.97999572753906
+  },
+  "release_at": "2019-07-16T11:00:00+00:00",
+  "release_heights_m": [
+    10.0,
+    500.0
+  ],
+  "pollutant_code": "I131",
+  "layer_top_m": 500,
+  "frame_count": 24,
+  "time_intervals": [
+    {
+      "from": "2019-07-16T11:00:00+00:00",
+      "to": "2019-07-16T14:00:00+00:00"
+    },
+    {
+      "from": "2019-07-16T14:00:00+00:00",
+      "to": "2019-07-16T17:00:00+00:00"
+    },
+    {
+      "from": "2019-07-16T17:00:00+00:00",
+      "to": "2019-07-16T20:00:00+00:00"
+    },
+    {
+      "from": "2019-07-16T20:00:00+00:00",
+      "to": "2019-07-16T23:00:00+00:00"
+    },
+    {
+      "from": "2019-07-16T23:00:00+00:00",
+      "to": "2019-07-17T02:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T02:00:00+00:00",
+      "to": "2019-07-17T05:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T05:00:00+00:00",
+      "to": "2019-07-17T08:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T08:00:00+00:00",
+      "to": "2019-07-17T11:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T11:00:00+00:00",
+      "to": "2019-07-17T14:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T14:00:00+00:00",
+      "to": "2019-07-17T17:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T17:00:00+00:00",
+      "to": "2019-07-17T20:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T20:00:00+00:00",
+      "to": "2019-07-17T23:00:00+00:00"
+    },
+    {
+      "from": "2019-07-17T23:00:00+00:00",
+      "to": "2019-07-18T02:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T02:00:00+00:00",
+      "to": "2019-07-18T05:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T05:00:00+00:00",
+      "to": "2019-07-18T08:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T08:00:00+00:00",
+      "to": "2019-07-18T11:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T11:00:00+00:00",
+      "to": "2019-07-18T14:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T14:00:00+00:00",
+      "to": "2019-07-18T17:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T17:00:00+00:00",
+      "to": "2019-07-18T20:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T20:00:00+00:00",
+      "to": "2019-07-18T23:00:00+00:00"
+    },
+    {
+      "from": "2019-07-18T23:00:00+00:00",
+      "to": "2019-07-19T02:00:00+00:00"
+    },
+    {
+      "from": "2019-07-19T02:00:00+00:00",
+      "to": "2019-07-19T05:00:00+00:00"
+    },
+    {
+      "from": "2019-07-19T05:00:00+00:00",
+      "to": "2019-07-19T08:00:00+00:00"
+    },
+    {
+      "from": "2019-07-19T08:00:00+00:00",
+      "to": "2019-07-19T11:00:00+00:00"
+    }
+  ],
+  "units": "fraction of scenario peak",
+  "normalization_peak_original_units": 9.59172845316214e-13,
+  "display_min_fraction": 1e-06,
+  "grid_spacing_degrees": [
+    0.10000000149011612,
+    0.10000000149011612
+  ],
+  "processing": "NOAA concentration reader; linear contours of gridded output with contourpy; one fixed peak across all times; coordinates rounded to 5 decimals.",
+  "limitations": "Historical model sample from NOAA's public test data. I131 tracer, not smoke or PM2.5. This is not a current event prediction or a new model execution. Emission mass units are not inferred from the binary file.",
+  "attribution": "NOAA Air Resources Laboratory, hysplitplot public scientific sample. No NOAA endorsement."
+}

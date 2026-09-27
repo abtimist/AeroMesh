@@ -13,7 +13,7 @@ class WeatherLog(Base):
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     
     # Weather Vectors
-    wind_speed = Column(Float, nullable=False) # km/h or m/s based on API config
+    wind_speed = Column(Float, nullable=False) # m/s for all new ingestion
     wind_direction = Column(Float, nullable=False) # Degrees (0-360)
     pblh = Column(Float, nullable=False) # Planetary Boundary Layer Height (meters)
     

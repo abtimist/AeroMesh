@@ -1,4 +1,5 @@
-import { X, AlertTriangle, Clock } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
+import { useState } from 'react';
 
 const SEVERITY_COLORS = {
   CRITICAL: { bg: 'bg-red-50 dark:bg-red-950/50', border: 'border-red-200 dark:border-red-900', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
@@ -7,10 +8,10 @@ const SEVERITY_COLORS = {
   LOW:      { bg: 'bg-blue-50 dark:bg-blue-950/50', border: 'border-blue-200 dark:border-blue-900', text: 'text-blue-700 dark:text-blue-400', dot: 'bg-blue-500' },
 };
 
-function EventCard({ event }) {
+function EventCard({ event, onSelect, now }) {
   const sev = SEVERITY_COLORS[event.severity] || SEVERITY_COLORS.MEDIUM;
   const detected = event.detected_at ? new Date(event.detected_at) : new Date();
-  const ago = Math.round((Date.now() - detected.getTime()) / 60000);
+  const ago = Math.max(0, Math.round((now - detected.getTime()) / 60000));
   const agoStr = ago < 60 ? `${ago}m ago` : `${Math.round(ago / 60)}h ago`;
 
   return (
@@ -33,7 +34,7 @@ function EventCard({ event }) {
       </p>
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-disabled)' }}>
-          Confidence: {event.confidence?.toFixed(1)}%
+          {event.provenance_status === 'verified' ? event.source : 'Legacy source unverified'}
         </span>
         {event.plume_polygon && (
           <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
@@ -41,11 +42,14 @@ function EventCard({ event }) {
           </span>
         )}
       </div>
+      <button onClick={() => onSelect?.(event.id)} className="mt-3 text-xs text-blue-400 hover:underline">View evidence for event #{event.id}</button>
     </div>
   );
 }
 
-export default function AlertPanel({ open, onClose, events = [] }) {
+export default function AlertPanel({ open, onClose, events = [], onSelect }) {
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [now] = useState(() => Date.now());
   const criticalCount = events.filter(e => e.severity === 'CRITICAL').length;
 
   return (
@@ -89,10 +93,11 @@ export default function AlertPanel({ open, onClose, events = [] }) {
                 <p className="text-sm mt-1 text-gray-500">Events will appear here when detected.</p>
               </div>
             ) : (
-              events.map(event => (
-                <EventCard key={event.id} event={event} />
+              events.slice(0, visibleCount).map(event => (
+                <EventCard key={event.id} event={event} onSelect={onSelect} now={now} />
               ))
             )}
+            {events.length > visibleCount && <button onClick={() => setVisibleCount(count => count + 50)} className="text-blue-400 text-sm">Show next 50 events</button>}
           </div>
 
           {/* Footer with Pill Button */}

@@ -1,114 +1,55 @@
-import httpx
-import logging
+import asyncio
 import csv
-import io
 from datetime import datetime, timezone
-
+import io
+import logging
+import httpx
 from app.core.config import settings
+from app.core.cache import observations_cache
 from app.db.session import SessionLocal
 from app.models.event import PollutionEvent
+from app.models.forecast import FireEvidence
 
 logger = logging.getLogger(__name__)
 
 class NASA_FIRMSClient:
-    def __init__(self):
-        self.base_url = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
-        self.api_key = settings.NASA_FIRMS_API_KEY
-        self.timeout = 15.0
+    source = "VIIRS_NOAA20_NRT"
 
-    async def fetch_active_fires(self, bbox: str = "70,8,90,35", days: int = 1):
-        """
-        Fetches active fire hotspots from NASA FIRMS.
-        bbox format: minLon,minLat,maxLon,maxLat (e.g., India approximate bounds)
-        days: 1 to 10
-        source: VIIRS_SNPP_NRT
-        """
-        if not self.api_key:
-            logger.warning("NASA_FIRMS_API_KEY not set. Cannot fetch fire hotspots.")
+    async def fetch_active_fires(self, bbox="70,8,90,35", days=1):
+        if not settings.NASA_FIRMS_API_KEY:
             return
-
-        source = "VIIRS_SNPP_NRT"
-        # API expects: https://firms.modaps.eosdis.nasa.gov/api/area/csv/[transaction_id]/[source]/[area]/[DAY_RANGE]
-        url = f"{self.base_url}/{self.api_key}/{source}/{bbox}/{days}"
-        
-        async with httpx.AsyncClient() as client:
+        if not 1 <= days <= 10:
+            raise ValueError("FIRMS days must be between 1 and 10")
+        url = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/{settings.NASA_FIRMS_API_KEY}/{self.source}/{bbox}/{days}"
+        async with httpx.AsyncClient(timeout=20) as client:
             try:
-                response = await client.get(url, timeout=self.timeout)
+                response = await client.get(url)
                 response.raise_for_status()
-                # Parse CSV
-                csv_reader = csv.DictReader(io.StringIO(response.text))
-                fires = list(csv_reader)
-                self._save_hotspots(fires)
-            except Exception as e:
-                logger.error(f"Error fetching NASA FIRMS hotspots: {e}")
+                await asyncio.to_thread(self._save_hotspots, list(csv.DictReader(io.StringIO(response.text))))
+            except (httpx.HTTPError, ValueError):
+                # The URL contains a credential: do not log it.
+                logger.warning("FIRMS unavailable; existing observations retained")
 
-    def _save_hotspots(self, fire_data):
-        if not fire_data:
-            return
-
-        db = SessionLocal()
-        try:
-            for row in fire_data:
-                lat = float(row.get('latitude', 0))
-                lon = float(row.get('longitude', 0))
-                
-                # Combine acq_date and acq_time into a datetime object
-                acq_date = row.get('acq_date')
-                acq_time = row.get('acq_time') # Format is usually HHMM, e.g., '1430'
-                if acq_date and acq_time:
-                    dt_str = f"{acq_date} {acq_time}"
-                    dt = datetime.strptime(dt_str, "%Y-%m-%d %H%M").replace(tzinfo=timezone.utc)
-                else:
-                    dt = datetime.now(timezone.utc)
-                
-                frp = float(row.get('frp', 0))
-                confidence = row.get('confidence', 'n/a')
-                
-                # Calculate simple severity based on FRP (Fire Radiative Power)
-                severity = "LOW"
-                if frp > 100:
-                    severity = "CRITICAL"
-                elif frp > 50:
-                    severity = "HIGH"
-                elif frp > 20:
-                    severity = "MEDIUM"
-                
-                # We can map confidence 'n/a', 'l', 'n', 'h' to a float score
-                conf_score = 50.0
-                if confidence == 'h':
-                    conf_score = 90.0
-                elif confidence == 'n':
-                    conf_score = 60.0
-                elif confidence == 'l':
-                    conf_score = 30.0
-                    
-                
-                
-                # Prevent exact duplicates (same location and time)
-                existing = db.query(PollutionEvent).filter(
-                    PollutionEvent.detected_at == dt,
-                    PollutionEvent.event_type == 'biomass_burning'
-                ).first()
-                # A robust check would use ST_Equals on geometry, but this prevents simple duplication
-                
-                if not existing:
-                    plume_geojson = None
-
-                    event = PollutionEvent(
-                        origin_country='IND', # Simplified for this demo
-                        event_type='biomass_burning',
-                        lat=lat, lon=lon,
-                        severity=severity,
-                        confidence_score=conf_score,
-                        detected_at=dt,
-                        status='ACTIVE',
-                        plume_polygon=plume_geojson,
-                        predicted_vector_deg=145.0
-                    )
+    def _save_hotspots(self, records):
+        with SessionLocal() as db:
+            for row in records:
+                try:
+                    lat, lon = float(row["latitude"]), float(row["longitude"])
+                    when = datetime.strptime(row["acq_date"] + " " + row["acq_time"].zfill(4), "%Y-%m-%d %H%M").replace(tzinfo=timezone.utc)
+                    frp = float(row["frp"]) if row.get("frp") else None
+                except (KeyError, ValueError):
+                    continue
+                event = db.query(PollutionEvent).filter_by(lat=lat, lon=lon, detected_at=when, event_type="biomass_burning").first()
+                if event is None:
+                    # Severity is a local FRP category, not source attribution or confidence.
+                    severity = "CRITICAL" if frp is not None and frp > 100 else "HIGH" if frp is not None and frp > 50 else "MEDIUM" if frp is not None and frp > 20 else "LOW"
+                    event = PollutionEvent(origin_country="UNK", event_type="biomass_burning",
+                        lat=lat, lon=lon, detected_at=when, severity=severity,
+                        confidence_score=0, status="ACTIVE", plume_polygon=None, predicted_vector_deg=None)
                     db.add(event)
+                    db.flush()
+                db.merge(FireEvidence(event_id=event.id, source=f"NASA FIRMS {self.source}",
+                    frp_mw=frp, confidence=row.get("confidence"), satellite=row.get("satellite"),
+                    instrument=row.get("instrument"), fetched_at=datetime.now(timezone.utc)))
             db.commit()
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Database error saving NASA FIRMS hotspots: {e}")
-        finally:
-            db.close()
+        observations_cache.clear()

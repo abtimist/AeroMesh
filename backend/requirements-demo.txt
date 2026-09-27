@@ -1,0 +1,5 @@
+# Only needed to regenerate the bundled demo, not to launch AeroMesh.
+numpy>=2.0
+pytz>=2025.2
+contourpy>=1.3
+# Also check out NOAA hysplitdata at the revision in data/hysplit_demo/README.md.

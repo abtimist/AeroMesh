@@ -1,332 +1,175 @@
-import { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap, useMapEvents, Polyline } from 'react-leaflet';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import AlertPanel from './AlertPanel';
-import WindVelocityLayer from './WindVelocityLayer';
-import AQILegend from './AQILegend';
+import ForecastSlider from './ForecastSlider';
 import LocateButton from './LocateButton';
 import MeasureTool from './MeasureTool';
 import { useTheme } from '../hooks';
+import { useResource } from '../api';
+import { selectFrame, selectContours, windVectors } from '../forecast';
 
-// AQI level → map marker color (EPA standard)
-const getSensorColor = (pm25) => {
-  if (!pm25) return '#999';
-  if (pm25 <= 12) return '#00e400';
-  if (pm25 <= 35.4) return '#ffff00';
-  if (pm25 <= 55.4) return '#ff7e00';
-  if (pm25 <= 150.4) return '#ff0000';
-  if (pm25 <= 250.4) return '#8f3f97';
-  return '#7e0023';
-};
-
-const getAqiLabel = (pm25) => {
-  if (!pm25) return 'N/A';
-  if (pm25 <= 12) return 'Good';
-  if (pm25 <= 35.4) return 'Moderate';
-  if (pm25 <= 55.4) return 'Unhealthy (SG)';
-  if (pm25 <= 150.4) return 'Unhealthy';
-  if (pm25 <= 250.4) return 'Very Unhealthy';
-  return 'Hazardous';
-};
-
+const WindVelocityLayer = lazy(() => import('./WindVelocityLayer'));
+const EvidencePanel = lazy(() => import('./AIEvidencePanel'));
+const HysplitDemo = lazy(() => import('./HysplitDemo'));
+const EMPTY = [];
 const NODE_CONFIG = {
-  'India Node':        { center: [22.5, 78.5],   zoom: 5 },
-  'Brazil Node':       { center: [-14.0, -51.0], zoom: 5 },
-  'China Node':        { center: [35.0, 105.0],  zoom: 5 },
-  'South Africa Node': { center: [-29.0, 25.0],  zoom: 6 },
+  'India Node': { key: 'india', center: [22.5, 78.5], zoom: 5 },
+  'Brazil Node': { key: 'brazil', center: [-14, -51], zoom: 5 },
+  'China Node': { key: 'china', center: [35, 105], zoom: 5 },
+  'South Africa Node': { key: 'south-africa', center: [-29, 25], zoom: 6 },
 };
+const aqiColor = value => value == null ? '#94a3b8' : value <= 50 ? '#22c55e' : value <= 100 ? '#eab308' : value <= 150 ? '#f97316' : value <= 200 ? '#ef4444' : '#a855f7';
+const valueText = value => value == null ? 'Unavailable' : Number(value).toFixed(1);
+const dateText = value => value ? new Date(value).toLocaleString() : 'Time unavailable';
 
 function MapController({ center, zoom }) {
   const map = useMap();
-  useEffect(() => {
-    map.flyTo(center, zoom, { duration: 1.5 });
-  }, [center, zoom, map]);
+  useEffect(() => { map.flyTo(center, zoom, { duration: 0.8 }); }, [center, zoom, map]);
   return null;
 }
 
 function MapClickListener({ onMapClick }) {
-  useMapEvents({
-    click(e) {
-      if (onMapClick) onMapClick(e.latlng);
-    },
-  });
+  useMapEvents({ click: e => onMapClick(e.latlng) });
   return null;
 }
 
 export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode, inspectMode, setInspectMode, mapType = 'satellite', layers }) {
-
-
   const { dark } = useTheme();
-  const [sensors, setSensors] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedEvidence, setSelectedEvidence] = useState(null);
+  const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
+  const sensorResource = useResource('/api/data/sensors?node=' + config.key);
+  const eventResource = useResource('/api/data/events?node=' + config.key);
+  const forecastResource = useResource('/api/forecast?node=' + config.key, 60000);
+  const plumeResource = useResource('/api/dispersion/contours?node=' + config.key);
+  const modelResource = useResource('/api/dispersion/status', 60000);
+  const sensors = sensorResource.data || EMPTY;
+  const events = eventResource.data || EMPTY;
+  const forecast = forecastResource.data;
+  const [selection, setSelection] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [demo, setDemo] = useState(null);
   const [clickedLocation, setClickedLocation] = useState(null);
-  const [hoursForward, setHoursForward] = useState(0);
-  const [windData, setWindData] = useState({ speed: 15, direction: 145 });
-
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [sensorRes, eventRes] = await Promise.all([
-          fetch('http://localhost:8000/api/data/sensors').catch(() => null),
-          fetch('http://localhost:8000/api/data/events').catch(() => null)
-        ]);
-        if (sensorRes && sensorRes.ok) setSensors(await sensorRes.json());
-        if (eventRes && eventRes.ok) setEvents(await eventRes.json());
-      } catch (err) {
-        console.error("Failed to fetch map data", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-    const intervalId = setInterval(fetchData, 60000);
-    return () => clearInterval(intervalId);
-  }, [activeNode]);
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  const timelineTimes = useMemo(() => [...new Set([
+    ...(forecast?.frames || []).map(f => f.valid_at),
+    ...(plumeResource.data?.features || []).map(f => f.properties.valid_to),
+  ])].sort(), [forecast, plumeResource.data]);
+  const selectedAt = timelineTimes.includes(selection) ? selection : forecast?.frames?.[0]?.valid_at || timelineTimes[0] || null;
+  const frame = selectFrame(forecast, selectedAt);
+  const plumes = useMemo(() => selectContours(plumeResource.data, selectedAt), [plumeResource.data, selectedAt]);
+  const vectors = useMemo(() => windVectors(frame, forecast?.grid), [frame, forecast?.grid]);
+  const selectedEvidence = events.find(e => e.id === selectedEvent);
+  const future = selectedAt && Date.parse(selectedAt) > now;
 
-  const toggleLayer = key => setLayers(prev => ({ ...prev, [key]: !prev[key] }));
-
-
-
-  // Esri World Imagery (Satellite view)
-  const tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-
-  const currentConfig = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
-
-  useEffect(() => {
-    // Fetch real wind data for the current node center using Open-Meteo
-    const fetchWind = async () => {
-      try {
-        const [lat, lon] = currentConfig.center;
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.current_weather) {
-            // Convert km/h to m/s roughly
-            const speedMs = data.current_weather.windspeed * 0.27778;
-            setWindData({
-              speed: speedMs > 5 ? speedMs : 15, // ensure minimum visual wind
-              direction: data.current_weather.winddirection || 145
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch wind data:', err);
-      }
-    };
-    fetchWind();
-    const intervalId = setInterval(fetchWind, 600000); // 10 minutes
-    return () => clearInterval(intervalId);
-  }, [currentConfig.center]);
-
-  // Filter data based on active node (roughly 35 degrees radius)
-  const isPointInNode = (lat, lon) => {
-    if (!lat || !lon) return false;
-    const [centerLat, centerLon] = currentConfig.center;
-    // Handle wrap-around for longitude
-    let dLon = Math.abs(lon - centerLon);
-    if (dLon > 180) dLon = 360 - dLon;
-    const dist = Math.sqrt(Math.pow(lat - centerLat, 2) + Math.pow(dLon, 2));
-    return dist < 35;
-  };
-
-  const filteredSensors = useMemo(() => sensors.filter(s => isPointInNode(s.lat, s.lon)), [sensors, activeNode]);
-  const filteredEvents = useMemo(() => events.filter(e => isPointInNode(e.lat, e.lon)), [events, activeNode]);
-
-  // Dynamic KPI stats from real data for the active node
-  const dynamicStats = useMemo(() => {
-    const peakSensor = filteredSensors.length > 0
-      ? filteredSensors.reduce((a, b) => ((a.pm25 || 0) > (b.pm25 || 0) ? a : b), filteredSensors[0])
-      : null;
-    return {
-      activeEvents: filteredEvents.length,
-      pm25Peak: peakSensor ? peakSensor.pm25 : 0,
-      pm25Location: peakSensor ? peakSensor.name : '—',
-      stationsOnline: filteredSensors.length,
-    };
-  }, [filteredSensors, filteredEvents]);
-
-
-  const handleMapClick = async (latlng) => {
-    if (!inspectMode) return;
-    setClickedLocation({ lat: latlng.lat, lng: latlng.lng, loading: true });
-    try {
-      const [weatherRes, aqRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latlng.lat}&longitude=${latlng.lng}&current_weather=true`),
-        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latlng.lat}&longitude=${latlng.lng}&current=pm10,pm2_5`)
-      ]);
-      const weather = weatherRes.ok ? await weatherRes.json() : null;
-      const aq = aqRes.ok ? await aqRes.json() : null;
-      
-      setClickedLocation({
-        lat: latlng.lat,
-        lng: latlng.lng,
-        loading: false,
-        weather: weather?.current_weather,
-        aqi: aq?.current
-      });
-    } catch (e) {
-      setClickedLocation(null);
-    }
-  };
+  // Observations stay at their measured times when scrubbing a forecast.
+  const inspectorPoint = useMemo(() => {
+    if (!clickedLocation || !frame) return null;
+    const closest = points => points.reduce((best, p) => {
+      const distance = Math.hypot(p.lat - clickedLocation.lat, p.lon - clickedLocation.lng);
+      return !best || distance < best.distance ? { ...p, distance } : best;
+    }, null);
+    return { weather: closest(frame.wind), air: closest(frame.air_quality) };
+  }, [clickedLocation, frame]);
 
   return (
-    <div 
-      className="relative w-full h-full overflow-hidden" 
-      style={{ 
-        background: dark ? '#0d1117' : '#e8ecf0',
-        cursor: inspectMode ? 'crosshair' : (measureMode ? 'crosshair' : 'default')
-      }}
-    >
-      <MapContainer
-        center={currentConfig.center}
-        zoom={currentConfig.zoom}
-        minZoom={3}
-        maxZoom={18}
-        scrollWheelZoom
-        zoomControl={true}
-        attributionControl={false}
-        worldCopyJump={true}
-        style={{ height: '100%', width: '100%', background: dark ? '#0d1117' : '#f8fafc' }}
-      >
-        <MapController center={currentConfig.center} zoom={currentConfig.zoom} />
-        {layers.wind && <WindVelocityLayer />}
-
+    <div className="relative w-full h-full" style={{ background: dark ? '#0d1117' : '#e8ecf0' }}>
+      <MapContainer center={config.center} zoom={config.zoom} minZoom={3} maxZoom={18} preferCanvas scrollWheelZoom worldCopyJump style={{ height: '100%', width: '100%' }}>
+        <MapController center={config.center} zoom={config.zoom} />
         <TileLayer
-          url={tileUrl}
-          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-          noWrap={false}
-          className="darkened-satellite"
+          url={mapType === 'satellite' ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+          attribution={mapType === 'satellite' ? 'Tiles © Esri — background imagery, not dated event evidence' : '© OpenStreetMap contributors'}
+          className={mapType === 'satellite' ? 'darkened-satellite' : ''}
         />
-
-        {/* Sensor markers */}
+        {layers.wind && <Suspense fallback={null}><WindVelocityLayer data={vectors} /></Suspense>}
         {layers.sensors && sensors.map(s => (
-          <CircleMarker
-            key={`sensor-${s.id}`}
-            center={[s.lat, s.lon]}
-            radius={8}
-            pathOptions={{
-              fillColor: '#22c55e',
-              fillOpacity: 0.8,
-              color: '#16a34a',
-              weight: 1
-            }}
-          >
-            <Tooltip direction="top" offset={[0, -8]} opacity={0.95} className="dark-tooltip" sticky>
-              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 140, textAlign: 'left' }}>
-                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: '#fff' }}>{s.name}</div>
-                <div style={{ fontSize: 11, color: '#cbd5e1' }}>
-                  PM2.5: <strong style={{ color: getSensorColor(s.pm25) }}>{s.pm25} µg/m³</strong>
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                  AQI: <span style={{ color: getSensorColor(s.pm25) }}>{getAqiLabel(s.pm25)}</span>
-                </div>
+          <CircleMarker key={'sensor-' + s.id} center={[s.lat, s.lon]} radius={5}
+            pathOptions={{ color: s.provenance_status === 'verified' ? '#22c55e' : '#94a3b8', fillOpacity: future ? 0.35 : 0.8, weight: 1 }}>
+            <Tooltip className="dark-tooltip" direction="top">
+              <div className="text-xs text-left">
+                <strong>{s.name}</strong><br />
+                Recorded PM2.5: {valueText(s.pm25)} µg/m³<br />
+                {dateText(s.timestamp)}<br />
+                Source: {s.source} · {s.provenance_status === 'verified' ? 'Verified ingestion' : 'Legacy provenance unverified'}<br />
+                {future ? 'Latest observation — not a future sensor reading' : 'Recorded observation — check its age'}
               </div>
             </Tooltip>
           </CircleMarker>
         ))}
-
-        {/* Fire event markers */}
-        {layers.fire && events.map(e => (
-          <CircleMarker
-            key={`event-${e.id}`}
-            center={[e.lat, e.lon]}
-            radius={6}
-            pathOptions={{
-              fillColor: '#f97316',
-              fillOpacity: 1.0,
-              color: '#ea580c',
-              weight: 1
-            }}
-            eventHandlers={{ click: () => setSelectedEvidence(e) }}
-          >
-            <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="dark-tooltip" sticky>
-              <div style={{ fontFamily: 'Inter, sans-serif', textAlign: 'left' }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: '#fff', marginBottom: 2 }}>🔥 Thermal Anomaly</div>
-                <div style={{ fontSize: 11, color: '#cbd5e1' }}>
-                  Severity: <strong style={{ color: e.severity === 'CRITICAL' ? '#ef4444' : '#f97316' }}>{e.severity}</strong><br/>
-                  <span style={{ color: '#94a3b8' }}>Click to view AI Evidence</span>
-                </div>
+        {layers.fire && events.map(event => (
+          <CircleMarker key={'event-' + event.id} center={[event.lat, event.lon]} radius={4}
+            pathOptions={{ color: '#f97316', fillOpacity: future ? 0.45 : 0.9, weight: 1 }}
+            eventHandlers={{ click: () => setSelectedEvent(event.id) }}>
+            <Tooltip className="dark-tooltip">
+              <div className="text-xs text-left">
+                <strong>Recorded thermal event #{event.id}</strong><br />
+                Observed {dateText(event.detected_at)}<br />
+                Age: {Math.max(0, Math.round((now - Date.parse(event.detected_at)) / 3600000))} hours<br />
+                {event.source}<br />Click for source evidence and dated imagery.
               </div>
             </Tooltip>
           </CircleMarker>
         ))}
-
-
+        {layers.airQuality && (frame?.air_quality || EMPTY).map((p, i) => (
+          <CircleMarker key={'aq-' + i} center={[p.lat, p.lon]} radius={13}
+            pathOptions={{ color: aqiColor(p.us_aqi), fillOpacity: 0.3, weight: 2 }}>
+            <Tooltip className="dark-tooltip">
+              <div className="text-xs text-left">
+                <strong>CAMS Global model forecast</strong><br />
+                PM2.5: {valueText(p.pm2_5)} µg/m³ · US AQI: {valueText(p.us_aqi)}<br />
+                AOD: {valueText(p.aerosol_optical_depth)} (column aerosol)<br />
+                Valid {dateText(frame.valid_at)}<br />~45 km native resolution · regional sample
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        ))}
+        {layers.plumes && plumes.features.length > 0 && (
+          <GeoJSON key={selectedAt + ':' + plumes.features.map(f => f.properties.run_id).join(',')} data={plumes}
+            style={{ color: '#f87171', weight: 1, fillOpacity: 0.2 }}
+            onEachFeature={(feature, layer) => {
+              const p = feature.properties;
+              layer.bindTooltip('HYSPLIT relative dispersion · ' + dateText(p.valid_from) + ' to ' + dateText(p.valid_to) + ' · layer 0–' + p.averaged_layer_top_m + ' m');
+              layer.on('click', () => setSelectedEvent(p.event_id));
+            }} />
+        )}
         <MeasureTool isActive={measureMode} />
         <LocateButton />
-        <MapClickListener onMapClick={handleMapClick} />
+        <MapClickListener onMapClick={point => { if (inspectMode) setClickedLocation(point); }} />
       </MapContainer>
 
-      {inspectMode && (
-        <style>{`
-          .leaflet-container { cursor: crosshair !important; }
-          .leaflet-interactive { cursor: crosshair !important; }
-        `}</style>
+      <div className="absolute top-4 left-20 z-[500] bg-gray-950/90 text-gray-200 rounded-xl px-4 py-2 text-xs max-w-[70%]">
+        {sensorResource.loading || eventResource.loading ? 'Loading regional observations…' : sensors.length + ' stations · ' + events.length + ' recorded events'}
+        {(sensorResource.error || eventResource.error) && <p role="alert" className="text-amber-300">Observations unavailable or stale: {sensorResource.error || eventResource.error}</p>}
+        {layers.wind && !vectors && <p className="text-amber-300">Wind unavailable for this time.</p>}
+        {layers.airQuality && !frame?.air_quality?.length && <p className="text-amber-300">Air-quality forecast unavailable for this time.</p>}
+        {plumeResource.error && <p className="text-amber-300">Dispersion unavailable: {plumeResource.error}</p>}
+        <button className="block mt-2 text-amber-300 underline" onClick={() => setDemo({})}>Explore HYSPLIT demonstration</button>
+      </div>
+
+      {clickedLocation && inspectMode && (
+        <section className="absolute top-4 right-4 z-[600] w-64 rounded-2xl bg-gray-950/95 border border-gray-700 text-gray-200 p-4 text-xs space-y-2">
+          <div className="flex justify-between"><strong>Regional forecast sample</strong><button aria-label="Close location data" onClick={() => { setClickedLocation(null); setInspectMode(false); }}>Close</button></div>
+          <p>Nearest sample to {clickedLocation.lat.toFixed(3)}, {clickedLocation.lng.toFixed(3)}</p>
+          <p>Valid: {dateText(selectedAt)}</p>
+          <p>Wind: {valueText(inspectorPoint?.weather?.wind_speed_10m)} m/s</p>
+          <p>Direction (from): {valueText(inspectorPoint?.weather?.wind_direction_10m)}°</p>
+          <p>Boundary layer: {valueText(inspectorPoint?.weather?.boundary_layer_height)} m</p>
+          <p>PM2.5: {valueText(inspectorPoint?.air?.pm2_5)} µg/m³</p>
+          <p>US AQI: {valueText(inspectorPoint?.air?.us_aqi)}</p>
+          <p className="text-gray-400">GFS / CAMS via Open-Meteo. Regional samples, not measurements at your click location.</p>
+        </section>
       )}
 
-      {/* Dynamic Weather Inspect Panel (Custom UI overlay) */}
-      {clickedLocation && (
-        <div 
-          className="absolute bottom-6 right-6 z-[1000] w-64 rounded-[24px] border shadow-2xl p-4 flex flex-col gap-3 backdrop-blur-md transition-all"
-          style={{
-            background: dark ? 'rgba(15, 15, 20, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-            borderColor: dark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
-            color: dark ? '#cbd5e1' : '#334155'
-          }}
-        >
-          <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-500">
-              📍 Location Data
-            </h3>
-            <button 
-              onClick={() => {
-                setClickedLocation(null);
-                setInspectMode(false);
-              }} 
-              className="opacity-50 hover:opacity-100 transition-opacity"
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div className="text-[10px] font-mono opacity-50 mb-1">
-            {clickedLocation.lat.toFixed(4)}, {clickedLocation.lng.toFixed(4)}
-          </div>
-
-          {clickedLocation.loading ? (
-            <div className="text-sm py-4 text-center opacity-70 animate-pulse">Scanning atmosphere...</div>
-          ) : (
-            <div className="flex flex-col gap-2 text-sm font-medium">
-              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
-                <span className="opacity-70">Temperature</span>
-                <span className="text-emerald-500 font-bold">{clickedLocation.weather?.temperature}°C</span>
-              </div>
-              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
-                <span className="opacity-70">Wind</span>
-                <span className="text-sky-400 font-bold">{clickedLocation.weather?.windspeed} km/h</span>
-              </div>
-              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
-                <span className="opacity-70">PM 2.5</span>
-                <span className="font-bold">
-                  {clickedLocation.aqi?.pm2_5 || '--'} µg/m³
-                </span>
-              </div>
-              <div className="flex justify-between items-center bg-black/10 dark:bg-white/5 p-2 rounded-lg">
-                <span className="opacity-70">AQI</span>
-                <span className="font-bold uppercase tracking-wide">
-                  {getAqiLabel(clickedLocation.aqi?.pm2_5)}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* HUD Overlays */}
-      <AQILegend isVisible={layers.sensors} />
-      <AlertPanel open={alertPanelOpen} onClose={onAlertPanelClose} events={events} />
+      <ForecastSlider forecast={forecast} times={timelineTimes} selectedAt={selectedAt} onChange={setSelection}
+        loading={forecastResource.loading} error={forecastResource.error} dispersionStatus={modelResource.data} plumeCount={plumes.features.length} />
+      {alertPanelOpen && <AlertPanel open onClose={onAlertPanelClose} events={events} onSelect={id => { setSelectedEvent(id); onAlertPanelClose(); }} />}
+      {selectedEvidence && <Suspense fallback={<div className="absolute top-20 right-4 z-[1000] bg-gray-950 p-4 text-white">Loading evidence…</div>}>
+        <EvidencePanel key={selectedEvidence.id} event={selectedEvidence} onClose={() => setSelectedEvent(null)} onDemo={() => setDemo({event: selectedEvidence})} modelStatus={modelResource.data} />
+      </Suspense>}
+      {demo && <Suspense fallback={<div className="fixed inset-0 z-[1300] bg-gray-950 text-white p-8">Loading bundled HYSPLIT replay…</div>}><HysplitDemo contextEvent={demo.event} onClose={() => setDemo(null)} /></Suspense>}
     </div>
   );
 }

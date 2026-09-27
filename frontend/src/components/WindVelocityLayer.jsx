@@ -1,45 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-velocity/dist/leaflet-velocity.js';
 import 'leaflet-velocity/dist/leaflet-velocity.css';
 
-export default function WindVelocityLayer() {
+// The vendor canvas can clear its frame handle before a queued draw executes.
+// Guard the callback itself, including callbacks already bound by requestAnimFrame.
+const SafeCanvasLayer = L.CanvasLayer.extend({
+  drawLayer() {
+    if (this._map && this._canvas) return L.CanvasLayer.prototype.drawLayer.call(this);
+  },
+  _onLayerDidMove() {
+    if (this._map && this._canvas) return L.CanvasLayer.prototype._onLayerDidMove.call(this);
+  },
+});
+L.canvasLayer = options => new SafeCanvasLayer(options);
+
+export default function WindVelocityLayer({ data }) {
   const map = useMap();
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    fetch('/data/wind-global.json')
-      .then(response => response.json())
-      .then(json => setData(json))
-      .catch(err => console.error("Failed to fetch wind data", err));
-  }, []);
-
   useEffect(() => {
     if (!data) return;
-
-    const velocityLayer = L.velocityLayer({
-      displayValues: false,
-      displayOptions: {
-        velocityType: 'Global Wind',
-        position: 'bottomleft',
-        emptyString: 'No wind data'
-      },
-      data: data,
-      maxVelocity: 15,
-      colorScale: ["rgba(255,255,255,0.7)", "rgba(255,255,255,0.9)", "#ffffff"],
-      lineWidth: 2,
-      velocityScale: 0.005, // arbitrary default
-      particleAge: 90,
-      particleMultiplier: 1/800, // lower multiplier = fewer particles
+    const layer = L.velocityLayer({
+      displayValues: false, data, maxVelocity: 25,
+      colorScale: ['rgba(210,235,255,0.7)', '#ffffff'],
+      lineWidth: 1.5, velocityScale: 0.005, particleAge: 70, particleMultiplier: 1 / 1200,
     });
-
-    velocityLayer.addTo(map);
-
+    // leaflet-velocity schedules canvas work without cancelling it on removal.
+    // Defer attachment past StrictMode's probe and clean up its pending work.
+    const mount = setTimeout(() => layer.addTo(map), 0);
     return () => {
-      velocityLayer.remove();
+      clearTimeout(mount);
+      if (!map.hasLayer(layer)) return;
+      const canvas = layer._canvasLayer;
+      if (canvas) {
+        L.Util.cancelAnimFrame(canvas._frame);
+        // The plugin's zero-delay callback looks this method up at invocation.
+        canvas._onLayerDidMove = () => {};
+      }
+      if (layer._windy) {
+        map.off('dragstart zoomstart', layer._windy.stop);
+      }
+      map.off('dragend zoomend', layer._clearAndRestart);
+      map.off('resize', layer._clearWind);
+      layer.remove();
     };
   }, [map, data]);
-
   return null;
 }

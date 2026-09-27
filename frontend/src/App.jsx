@@ -1,9 +1,9 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import './index.css';
 import { useDeviceType } from './hooks';
 
-import DashboardPage     from './pages/DashboardPage';
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 import CitizenPortalPage from './pages/CitizenPortalPage';
 
 function SmartRoot({ activeNode, setActiveNode, initialPanel }) {
@@ -35,19 +35,19 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<div className="p-8">Loading AeroMesh…</div>}><Routes>
         <Route path="/"       element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
         
         {/* Map dashboard routes to the same SmartRoot so they don't 404, optionally opening panels */}
         <Route path="/alerts" element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="alerts" />} />
-        <Route path="/map"    element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
+        <Route path="/map"    element={<DashboardPage activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
         <Route path="/history" element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="history" />} />
 
         {/* /report → always citizen portal — shareable link for WhatsApp/SMS dispatch */}
         <Route path="/report" element={<CitizenPortalPage />} />
 
         <Route path="*"       element={<NotFoundPage />} />
-      </Routes>
+      </Routes></Suspense>
     </BrowserRouter>
   );
 }

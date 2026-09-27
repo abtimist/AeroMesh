@@ -28,3 +28,5 @@ class PollutionEvent(Base):
 
 # Spatial Index created automatically by GeoAlchemy2 on the Geometry columns
 Index('idx_pollution_event_status_time', PollutionEvent.status, PollutionEvent.detected_at)
+Index('idx_event_map_covering', PollutionEvent.status, PollutionEvent.lon, PollutionEvent.lat,
+      PollutionEvent.detected_at, PollutionEvent.id, PollutionEvent.event_type, PollutionEvent.severity)

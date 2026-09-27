@@ -8,6 +8,8 @@ const LAYERS = [
   { key: 'sensors',    label: 'Sensors',    icon: Activity, shortcut: 'S', color: '#22c55e' },
   { key: 'fire',       label: 'Fire Spots', icon: Flame,    shortcut: 'F', color: '#f97316' },
   { key: 'wind',       label: 'Wind',       icon: Wind,     shortcut: 'W', color: '#60a5fa' },
+  { key: 'airQuality', label: 'AQ forecast', icon: Cloud, shortcut: 'Q', color: '#c084fc' },
+  { key: 'plumes', label: 'HYSPLIT dispersion', icon: Route, shortcut: 'P', color: '#f87171' },
 ];
 
 export default function FloatingSidebar({ 

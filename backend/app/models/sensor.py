@@ -31,3 +31,4 @@ class Measurement(Base):
 
 # Create composite index for time-series querying
 Index('idx_measurement_sensor_time', Measurement.sensor_id, Measurement.timestamp)
+Index('idx_measurement_latest_pm25', Measurement.sensor_id, Measurement.parameter, Measurement.timestamp, Measurement.id)
