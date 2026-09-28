@@ -60,10 +60,10 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
           <input
             type="search"
             placeholder="Search locations, sensors, events…"
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+            className="w-full pl-9 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-300"
             style={{
-              background: inputBg,
-              border: `1px solid ${border}`,
+              background: dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              border: `1px solid ${dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
               color: text,
             }}
           />
@@ -77,8 +77,12 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
         <div className="relative hidden sm:block">
           <button
             onClick={() => toggleDropdown('role')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: inputBg, border: `1px solid ${border}`, color: muted }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:opacity-80"
+            style={{ 
+              background: dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', 
+              border: `1px solid ${dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`, 
+              color: muted 
+            }}
           >
             <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
             {role}
