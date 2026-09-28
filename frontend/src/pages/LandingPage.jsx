@@ -70,6 +70,28 @@ export default function LandingPage() {
       </nav>
 
       <main>
+        {/* Marquee Section */}
+        <section className="border-b border-[#E8E6E1] bg-[#F7F6F2] py-3 overflow-hidden relative">
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#F7F6F2] to-transparent z-10"></div>
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#F7F6F2] to-transparent z-10"></div>
+          <motion.div 
+            animate={{ x: [0, -1036] }}
+            transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
+            className="flex gap-16 whitespace-nowrap opacity-40 hover:opacity-80 transition-opacity items-center w-max"
+          >
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex gap-16 items-center">
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">NOAA</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">CAMS GLOBAL</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">NASA GOES</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">ESA SENTINEL</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">OPEN-METEO</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">BRICS FEDERATION</span>
+              </div>
+            ))}
+          </motion.div>
+        </section>
+
         {/* Hero Section */}
         <section className="pt-24 pb-32 px-6 md:pt-32 md:pb-40">
           <div className="max-w-[1200px] mx-auto text-center flex flex-col items-center">
@@ -117,44 +139,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Marquee Section */}
-        <section className="border-y border-[#E8E6E1] bg-[#F7F6F2] py-8 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#F7F6F2] to-transparent z-10"></div>
-          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#F7F6F2] to-transparent z-10"></div>
-          <motion.div 
-            animate={{ x: [0, -1036] }}
-            transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-            className="flex gap-16 whitespace-nowrap opacity-50 hover:opacity-80 transition-opacity items-center w-max"
-          >
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex gap-16 items-center">
-                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">NOAA</span>
-                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">CAMS GLOBAL</span>
-                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">NASA GOES</span>
-                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">ESA SENTINEL</span>
-                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">OPEN-METEO</span>
-                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">BRICS FEDERATION</span>
-              </div>
-            ))}
-          </motion.div>
-        </section>
-
         {/* Abstract App Preview */}
-        <section className="px-6 pb-32">
-          <div className="max-w-[1000px] mx-auto">
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.8 }}
-              className="relative rounded-2xl border border-[#E8E6E1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#F7F6F2] to-white z-0 opacity-50 pointer-events-none"></div>
-              <div className="relative z-10 rounded-xl overflow-hidden bg-[#0F0E0C] aspect-[16/10] flex items-center justify-center border border-[#E8E6E1] shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
-                <img src="/dashboard_screenshot.jpg" alt="AeroMesh Interface" className="w-full h-full object-cover" />
-              </div>
-            </motion.div>
-          </div>
+        <section className="pb-32 w-full">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="w-full border-y border-[#E8E6E1] shadow-[0_20px_60px_rgba(0,0,0,0.15)] bg-[#0F0E0C] relative"
+          >
+            <img src="/dashboard_screenshot.jpg" alt="AeroMesh Interface" className="w-full h-auto object-cover" />
+          </motion.div>
         </section>
 
         {/* Features Section */}
