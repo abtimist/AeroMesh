@@ -22,8 +22,9 @@ export default function AQHeatmapLayer({ data }) {
     };
 
     const heatLayer = L.heatLayer(points, {
-      radius: 40,       // Reduced radius so it doesn't cover the entire map in one blob
-      blur: 25,         // Reduced blur for better localized hotspots
+      radius: 120,      // Increased radius to blend points into a continuous field
+      blur: 80,         // Increased blur for a smooth surface
+
       maxZoom: 6,       
       max: 150,         // Scale intensity relative to 150 AQI
       minOpacity: 0.15, // Make low values slightly transparent
