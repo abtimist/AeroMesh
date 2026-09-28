@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Circle, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Rectangle, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import AlertPanel from './AlertPanel';
 import ForecastSlider from './ForecastSlider';
@@ -37,9 +37,9 @@ function MapClickListener({ onMapClick }) {
 export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode, inspectMode, setInspectMode, mapType = 'satellite', layers }) {
   const { dark } = useTheme();
   const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
-  const sensorResource = useResource('/api/data/sensors?node=' + config.key);
-  const eventResource = useResource('/api/data/events?node=' + config.key);
-  const forecastResource = useResource('/api/forecast?node=' + config.key, 60000);
+  const sensorResource = useResource('/api/data/sensors?node=all');
+  const eventResource = useResource('/api/data/events?node=all');
+  const forecastResource = useResource('/api/forecast?node=all', 60000);
   const plumeResource = useResource('/api/dispersion/contours?node=' + config.key);
   const modelResource = useResource('/api/dispersion/status', 60000);
   const sensors = sensorResource.data || EMPTY;
@@ -114,7 +114,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           </CircleMarker>
         ))}
         {layers.airQuality && (frame?.air_quality || EMPTY).map((p, i) => (
-          <Circle key={'aq-' + i} center={[p.lat, p.lon]} radius={350000}
+          <Rectangle key={'aq-' + i} bounds={[[p.lat - 5, p.lon - 5], [p.lat + 5, p.lon + 5]]}
             pathOptions={{ stroke: false, fillColor: aqiColor(p.us_aqi), fillOpacity: 0.35 }}>
             <Tooltip className="dark-tooltip">
               <div className="text-xs text-left">
@@ -124,7 +124,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                 Valid {dateText(frame.valid_at)}<br />~45 km native resolution · regional sample
               </div>
             </Tooltip>
-          </Circle>
+          </Rectangle>
         ))}
         {layers.plumes && plumes.features.length > 0 && (
           <GeoJSON key={selectedAt + ':' + plumes.features.map(f => f.properties.run_id).join(',')} data={plumes}

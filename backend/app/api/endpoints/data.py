@@ -11,7 +11,7 @@ from app.core.regions import regional_query
 from app.core.cache import observations_cache
 
 router = APIRouter()
-Node = Literal["india", "brazil", "china", "south-africa"]
+Node = Literal["india", "brazil", "china", "south-africa", "all"]
 
 def utc_iso(value):
     return value.replace(tzinfo=value.tzinfo or timezone.utc).astimezone(timezone.utc).isoformat() if value else None

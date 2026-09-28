@@ -15,6 +15,12 @@ def utc(value):
     return parsed.replace(tzinfo=parsed.tzinfo or UTC).astimezone(UTC)
 
 def grid_points(node):
+    if node == "all":
+        points = []
+        for n in ["india", "brazil", "china", "south-africa"]:
+            west, south, east, north = REGIONS[n]["bbox"]
+            points.extend([(round(north - y * (north - south) / 4, 4), round(west + x * (east - west) / 4, 4)) for y in range(5) for x in range(5)])
+        return points
     west, south, east, north = REGIONS[node]["bbox"]
     # A coarse regional sampling grid, explicitly exposed as such in metadata.
     return [(round(north - y * (north - south) / 4, 4), round(west + x * (east - west) / 4, 4)) for y in range(5) for x in range(5)]
@@ -120,7 +126,7 @@ class ForecastService:
                     "kind": "forecast", "frames": frames,
                     "wind": {"source": "NOAA GFS via Open-Meteo", "units": "m/s", "status": "available" if weather else "unavailable", "error": wxerror},
                     "air_quality": {"source": "CAMS Global via Open-Meteo", "pm25_units": "µg/m³", "aqi_standard": "US AQI", "aod_units": "dimensionless", "native_resolution_km": 45, "native_time_step_hours": 3, "status": "available" if air else "unavailable", "error": aqerror},
-                    "grid": {"nx": 5, "ny": 5, "bbox": REGIONS[node]["bbox"], "description": "25 regional sample points; interpolated wind display, not a street-level forecast"}}
+                    "grid": {"nx": 20 if node == "all" else 5, "ny": 5, "bbox": REGIONS[node]["bbox"], "description": "100 combined sample points; interpolated wind display" if node == "all" else "25 regional sample points; interpolated wind display, not a street-level forecast"}}
                 # Persist ALL fetched hours (including later hours) indexed by location/time.
                 await asyncio.to_thread(save_snapshot, node + ":series", {"fetched_at": payload["fetched_at"], "weather": weather, "air_quality": air})
                 await asyncio.to_thread(save_snapshot, node, payload)
