@@ -6,7 +6,7 @@ export default function DashboardLayout({ children, alertCount, activeNode, setA
   const { dark, toggle } = useTheme();
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden transition-colors relative" style={{ background: 'var(--color-page-bg)' }}>
+    <div className="flex flex-col h-full overflow-hidden transition-colors relative" style={{ background: 'var(--color-page-bg)' }}>
       <OfflineBanner />
       {/* Topbar spans full width */}
       <Topbar alertCount={alertCount} dark={dark} onToggleDark={toggle} activeNode={activeNode} setActiveNode={setActiveNode} />

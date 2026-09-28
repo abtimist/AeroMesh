@@ -38,23 +38,23 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
   return (
     <header
       ref={topbarRef}
-      className="flex items-center justify-between px-4 shrink-0 z-[1000]"
+      className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-between px-4 z-[1000] rounded-[24px] backdrop-blur-md border shadow-2xl transition-all duration-300 w-[calc(100%-2rem)] md:w-auto md:min-w-[700px]"
       style={{
         height: 'var(--topbar-height)',
-        background: surface,
-        borderBottom: `1px solid ${border}`,
+        background: dark ? 'rgba(15, 15, 20, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+        borderColor: dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
       }}
     >
       {/* ── Logo ── */}
       <div className="flex items-center gap-2.5 shrink-0" style={{ width: 'var(--sidebar-width)' }}>
         <img src="/icon.png" alt="AeroMesh Icon" className="w-8 h-8 object-contain" />
-        <span className="font-semibold text-sm tracking-tight hidden lg:block" style={{ color: text }}>
+        <span className="font-semibold text-sm tracking-tight" style={{ color: text }}>
           AeroMesh
         </span>
       </div>
 
       {/* ── Search ── */}
-      <div className="flex-1 max-w-sm mx-6 hidden md:block">
+      <div className="flex-1 max-w-[150px] md:max-w-sm mx-2 md:mx-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: muted }} />
           <input
@@ -74,7 +74,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
       <div className="flex items-center gap-2">
 
         {/* Role switcher — for hackathon judges */}
-        <div className="relative hidden lg:block">
+        <div className="relative hidden sm:block">
           <button
             onClick={() => toggleDropdown('role')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
@@ -172,8 +172,8 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
           <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold select-none">
             JD
           </div>
-          <span className="text-sm font-medium hidden lg:block" style={{ color: text }}>Jane D.</span>
-          <ChevronDown className="w-3 h-3 hidden lg:block" style={{ color: muted }} />
+          <span className="text-sm font-medium hidden sm:block" style={{ color: text }}>Jane D.</span>
+          <ChevronDown className="w-3 h-3 hidden sm:block" style={{ color: muted }} />
         </button>
       </div>
     </header>
