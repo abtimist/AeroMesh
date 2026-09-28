@@ -4,6 +4,7 @@ import './index.css';
 import { useDeviceType } from './hooks';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 import CitizenPortalPage from './pages/CitizenPortalPage';
 
 function SmartRoot({ activeNode, setActiveNode, initialPanel }) {
@@ -36,12 +37,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<div className="p-8">Loading AeroMesh…</div>}><Routes>
-        <Route path="/"       element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
+        <Route path="/"       element={<LandingPage />} />
         
-        {/* Map dashboard routes to the same SmartRoot so they don't 404, optionally opening panels */}
-        <Route path="/alerts" element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="alerts" />} />
+        {/* Map dashboard routes */}
+        <Route path="/alerts" element={<DashboardPage activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="alerts" />} />
         <Route path="/map"    element={<DashboardPage activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="none" />} />
-        <Route path="/history" element={<SmartRoot activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="history" />} />
+        <Route path="/history" element={<DashboardPage activeNode={activeNode} setActiveNode={setActiveNode} initialPanel="history" />} />
 
         {/* /report → always citizen portal — shareable link for WhatsApp/SMS dispatch */}
         <Route path="/report" element={<CitizenPortalPage />} />
