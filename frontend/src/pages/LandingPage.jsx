@@ -151,7 +151,7 @@ export default function LandingPage() {
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-[#F7F6F2] to-white z-0 opacity-50 pointer-events-none"></div>
               <div className="relative z-10 rounded-xl overflow-hidden bg-[#0F0E0C] aspect-[16/10] flex items-center justify-center border border-[#E8E6E1] shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
-                <img src="/mockup.png" alt="AeroMesh Interface Mockup" className="w-full h-full object-cover" />
+                <img src="/dashboard_screenshot.jpg" alt="AeroMesh Interface" className="w-full h-full object-cover" />
               </div>
             </motion.div>
           </div>
