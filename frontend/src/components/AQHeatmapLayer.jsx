@@ -22,8 +22,8 @@ export default function AQHeatmapLayer({ data }) {
     };
 
     const heatLayer = L.heatLayer(points, {
-      radius: 120,      // Increased radius to blend points into a continuous field
-      blur: 80,         // Increased blur for a smooth surface
+      radius: 65,       // Balanced radius for continuous field without blowing out
+      blur: 45,         // Balanced blur to keep contours recognizable
 
       maxZoom: 6,       
       max: 150,         // Scale intensity relative to 150 AQI
