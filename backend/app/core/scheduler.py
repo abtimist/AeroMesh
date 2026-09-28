@@ -1,5 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import logging
+from datetime import datetime, timezone
 from app.services.openaq_client import OpenAQClient
 from app.services.meteo_client import OpenMeteoClient
 from app.services.firms_client import NASA_FIRMSClient
@@ -38,14 +39,15 @@ async def job_sync_firms():
     logger.info("NASA FIRMS sync job completed.")
 
 def start_scheduler():
+    now = datetime.now(timezone.utc)
     # Sync OpenAQ every hour
-    scheduler.add_job(job_sync_openaq, 'interval', minutes=60)
+    scheduler.add_job(job_sync_openaq, 'interval', minutes=60, next_run_time=now)
     
     # Sync Weather every hour
-    scheduler.add_job(job_sync_meteo, 'interval', minutes=60)
+    scheduler.add_job(job_sync_meteo, 'interval', minutes=60, next_run_time=now)
     
     # Sync NASA FIRMS every 3 hours
-    scheduler.add_job(job_sync_firms, 'interval', minutes=180)
+    scheduler.add_job(job_sync_firms, 'interval', minutes=180, next_run_time=now)
     
     scheduler.start()
     logger.info("Background APScheduler started.")

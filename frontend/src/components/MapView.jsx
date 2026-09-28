@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Circle, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import AlertPanel from './AlertPanel';
 import ForecastSlider from './ForecastSlider';
@@ -114,8 +114,8 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           </CircleMarker>
         ))}
         {layers.airQuality && (frame?.air_quality || EMPTY).map((p, i) => (
-          <CircleMarker key={'aq-' + i} center={[p.lat, p.lon]} radius={13}
-            pathOptions={{ color: aqiColor(p.us_aqi), fillOpacity: 0.3, weight: 2 }}>
+          <Circle key={'aq-' + i} center={[p.lat, p.lon]} radius={350000}
+            pathOptions={{ stroke: false, fillColor: aqiColor(p.us_aqi), fillOpacity: 0.35 }}>
             <Tooltip className="dark-tooltip">
               <div className="text-xs text-left">
                 <strong>CAMS Global model forecast</strong><br />
@@ -124,7 +124,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
                 Valid {dateText(frame.valid_at)}<br />~45 km native resolution · regional sample
               </div>
             </Tooltip>
-          </CircleMarker>
+          </Circle>
         ))}
         {layers.plumes && plumes.features.length > 0 && (
           <GeoJSON key={selectedAt + ':' + plumes.features.map(f => f.properties.run_id).join(',')} data={plumes}
