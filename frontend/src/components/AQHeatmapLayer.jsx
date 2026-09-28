@@ -22,10 +22,11 @@ export default function AQHeatmapLayer({ data }) {
     };
 
     const heatLayer = L.heatLayer(points, {
-      radius: 80,       // Large radius to interpolate across the coarse grid
-      blur: 50,         // High blur for smooth transitions
-      maxZoom: 8,       // Zoom level where points reach max radius
-      max: 200,         // Scale intensity relative to 200 AQI
+      radius: 40,       // Reduced radius so it doesn't cover the entire map in one blob
+      blur: 25,         // Reduced blur for better localized hotspots
+      maxZoom: 6,       
+      max: 150,         // Scale intensity relative to 150 AQI
+      minOpacity: 0.15, // Make low values slightly transparent
       gradient: gradient
     }).addTo(map);
 
