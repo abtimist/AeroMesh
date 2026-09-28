@@ -12,6 +12,8 @@ import { selectFrame, selectContours, windVectors } from '../forecast';
 const WindVelocityLayer = lazy(() => import('./WindVelocityLayer'));
 const EvidencePanel = lazy(() => import('./AIEvidencePanel'));
 const HysplitDemo = lazy(() => import('./HysplitDemo'));
+import AQHeatmapLayer from './AQHeatmapLayer';
+import AQLegend from './AQLegend';
 const EMPTY = [];
 const NODE_CONFIG = {
   'India Node': { key: 'india', center: [22.5, 78.5], zoom: 5 },
@@ -113,19 +115,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
             </Tooltip>
           </CircleMarker>
         ))}
-        {layers.airQuality && (frame?.air_quality || EMPTY).map((p, i) => (
-          <Rectangle key={'aq-' + i} bounds={[[p.lat - 5, p.lon - 5], [p.lat + 5, p.lon + 5]]}
-            pathOptions={{ stroke: false, fillColor: aqiColor(p.us_aqi), fillOpacity: 0.35 }}>
-            <Tooltip className="dark-tooltip">
-              <div className="text-xs text-left">
-                <strong>CAMS Global model forecast</strong><br />
-                PM2.5: {valueText(p.pm2_5)} µg/m³ · US AQI: {valueText(p.us_aqi)}<br />
-                AOD: {valueText(p.aerosol_optical_depth)} (column aerosol)<br />
-                Valid {dateText(frame.valid_at)}<br />~45 km native resolution · regional sample
-              </div>
-            </Tooltip>
-          </Rectangle>
-        ))}
+        {layers.airQuality && <AQHeatmapLayer data={frame?.air_quality || EMPTY} />}
         {layers.plumes && plumes.features.length > 0 && (
           <GeoJSON key={selectedAt + ':' + plumes.features.map(f => f.properties.run_id).join(',')} data={plumes}
             style={{ color: '#f87171', weight: 1, fillOpacity: 0.2 }}
@@ -165,6 +155,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
 
       <ForecastSlider forecast={forecast} times={timelineTimes} selectedAt={selectedAt} onChange={setSelection}
         loading={forecastResource.loading} error={forecastResource.error} dispersionStatus={modelResource.data} plumeCount={plumes.features.length} />
+      <AQLegend isVisible={layers.airQuality} />
       {alertPanelOpen && <AlertPanel open onClose={onAlertPanelClose} events={events} onSelect={id => { setSelectedEvent(id); onAlertPanelClose(); }} />}
       {selectedEvidence && <Suspense fallback={<div className="absolute top-20 right-4 z-[1000] bg-gray-950 p-4 text-white">Loading evidence…</div>}>
         <EvidencePanel key={selectedEvidence.id} event={selectedEvidence} onClose={() => setSelectedEvent(null)} onDemo={() => setDemo({event: selectedEvidence})} modelStatus={modelResource.data} />

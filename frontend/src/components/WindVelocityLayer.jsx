@@ -45,5 +45,19 @@ export default function WindVelocityLayer({ data }) {
       layer.remove();
     };
   }, [map, data]);
+
+  // Use a second effect to immediately remove the stop listeners so it keeps animating during pan
+  useEffect(() => {
+    if (!data) return;
+    const timer = setTimeout(() => {
+      let l;
+      map.eachLayer(L => { if (L._windy) l = L; });
+      if (l && l._windy) {
+        map.off('dragstart zoomstart', l._windy.stop);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [map, data]);
+
   return null;
 }
