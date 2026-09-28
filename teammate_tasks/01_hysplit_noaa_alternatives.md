@@ -6,6 +6,6 @@ The user will **not** be providing college details for NOAA registration, so obt
 - **Questions for you to research**: 
   - Why do we need the NOAA API in the first place? What specific data/capabilities are we trying to achieve with it?
   - Can this not be done with a free API through HYSPLIT, or another open dispersion modeling service?
-- **Action Item**: Please conduct your own research to find the best, most optimal free API or alternative solution that provides live, real-world dispersion data (or equivalent) without requiring institutional registration. We need real data, nothing fake. Implement the best alternative you find.
+- **Action Item**: Look for a way to use HYSPLIT for free for real time data, or look for alternatives. You could even combine a few different APIs to make it better, but you must look for the absolute optimal solution. Provide real-time data, nothing fake. Implement the best alternative you find.
 
 

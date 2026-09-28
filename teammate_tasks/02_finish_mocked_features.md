@@ -6,7 +6,7 @@ Previously, it was suggested to hide or remove unfinished screens (like the citi
 
 ## 2. Citizen Report Workflow (Computer Vision)
 - **Current State**: The citizen reporting workflow contains a fabricated computer-vision (CV) confidence result.
-- **Action Item**: Implement real logic for this. Do your own research on how to best implement a live, functional image analysis or CV validation system (e.g., integrating a real CV API or open-source model) to replace the fabricated confidence result. Everything must use real data and live logic.
+- **Action Item**: Complete the citizen report processing model making it fully working in real-time. Do your own research on how to best implement a live, functional image analysis or CV validation system (e.g., integrating a real CV API or open-source model) to replace the fabricated confidence result. Everything must use real data and live logic.
 
 ## 3. Dispatch System
 - **Current State**: Dispatch status and response units are currently simulated.
