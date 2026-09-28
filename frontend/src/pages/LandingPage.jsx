@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Wind, ShieldAlert, Activity, BarChart2, Globe, Server } from 'lucide-react';
+import { ArrowRight, Wind, ShieldAlert, Activity, BarChart2, Globe, Server, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 
 // Animation variants
@@ -117,6 +117,28 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Marquee Section */}
+        <section className="border-y border-[#E8E6E1] bg-[#F7F6F2] py-8 overflow-hidden relative">
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#F7F6F2] to-transparent z-10"></div>
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#F7F6F2] to-transparent z-10"></div>
+          <motion.div 
+            animate={{ x: [0, -1036] }}
+            transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+            className="flex gap-16 whitespace-nowrap opacity-50 hover:opacity-80 transition-opacity items-center w-max"
+          >
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex gap-16 items-center">
+                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">NOAA</span>
+                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">CAMS GLOBAL</span>
+                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">NASA GOES</span>
+                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">ESA SENTINEL</span>
+                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">OPEN-METEO</span>
+                <span className="font-['Geist',sans-serif] text-xl font-bold tracking-tighter">BRICS FEDERATION</span>
+              </div>
+            ))}
+          </motion.div>
+        </section>
+
         {/* Abstract App Preview */}
         <section className="px-6 pb-32">
           <div className="max-w-[1000px] mx-auto">
@@ -229,6 +251,58 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Testimonials Section */}
+        <section className="py-24 bg-[#F7F6F2] px-6 border-y border-[#E8E6E1]">
+          <div className="max-w-[1200px] mx-auto">
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="mb-16 text-center"
+            >
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#A8A49F] mb-4 block">Social Proof</span>
+              <h2 className="font-['Geist',sans-serif] text-[28px] md:text-[44px] font-bold leading-[1.15] tracking-[-0.015em] text-[#0F0E0C]">
+                Trusted by environmental agencies.
+              </h2>
+            </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] mx-auto">
+              <TestimonialCard 
+                quote="AeroMesh allowed our regional response team to anticipate agricultural smoke plumes 24 hours before they crossed our borders. The difference in healthcare preparedness was unprecedented."
+                name="Dr. Elena Rostova"
+                role="Director of Air Quality, EPA Partner"
+              />
+              <TestimonialCard 
+                quote="We used to rely on delayed satellite sweeps. Now, combining citizen SMS verification with real-time HYSPLIT models gives us ground truth instantly."
+                name="James Chen"
+                role="Head of Environmental Monitoring"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="py-24 md:py-32 px-6">
+          <div className="max-w-[800px] mx-auto">
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="mb-16 text-center"
+            >
+              <h2 className="font-['Geist',sans-serif] text-[28px] md:text-[44px] font-bold leading-[1.15] tracking-[-0.015em] text-[#0F0E0C]">
+                Frequently asked questions
+              </h2>
+            </motion.div>
+            <div className="divide-y divide-[#E8E6E1] border-y border-[#E8E6E1]">
+              <FaqItem question="How does the federated network protect data privacy?" answer="AeroMesh nodes run locally within each country's infrastructure. Only aggregated telemetry, anomaly flags, and transboundary plume forecasts are shared across the network, ensuring sensitive national data remains air-gapped." />
+              <FaqItem question="Can citizens report incidents without the app?" answer="Yes. The Citizen Verification module dispatches standard SMS texts to users in affected regions. They can confirm or deny incidents via SMS replies or a lightweight mobile web portal without downloading anything." />
+              <FaqItem question="Which satellite data sources are integrated?" answer="We fuse thermal anomalies from GOES-R, MODIS (Aqua/Terra), and VIIRS, cross-referencing them with global PM2.5 monitoring networks and CAMS Global atmospheric forecasts." />
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="py-32 bg-[#F7F6F2] px-6 text-center">
           <motion.div
@@ -295,13 +369,17 @@ function FeatureCard({ icon, title, description }) {
   return (
     <motion.div 
       variants={fadeUp}
-      className="bg-white border border-[#E8E6E1] rounded-xl p-8 hover:-translate-y-1 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)] transition-all duration-300"
+      whileHover={{ y: -4, boxShadow: "0 12px 30px rgba(0,0,0,0.08)" }}
+      className="bg-white border border-[#E8E6E1] rounded-xl p-8 transition-colors duration-300 relative group overflow-hidden"
     >
-      <div className="w-10 h-10 rounded-full bg-[#F7F6F2] flex items-center justify-center text-[#0F0E0C] mb-6">
-        {icon}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#F7F6F2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <div className="relative z-10">
+        <div className="w-10 h-10 rounded-full bg-[#F7F6F2] flex items-center justify-center text-[#0F0E0C] mb-6 group-hover:scale-110 transition-transform duration-300">
+          {icon}
+        </div>
+        <h3 className="font-['Geist',sans-serif] font-semibold text-xl mb-3 text-[#0F0E0C]">{title}</h3>
+        <p className="text-[#6B6760] leading-relaxed text-[15px]">{description}</p>
       </div>
-      <h3 className="font-['Geist',sans-serif] font-semibold text-xl mb-3 text-[#0F0E0C]">{title}</h3>
-      <p className="text-[#6B6760] leading-relaxed text-[15px]">{description}</p>
     </motion.div>
   );
 }
@@ -310,9 +388,10 @@ function StepItem({ number, title, description }) {
   return (
     <motion.div 
       variants={fadeUp}
-      className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 md:gap-16 items-start"
+      whileHover={{ x: 8 }}
+      className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 md:gap-16 items-start transition-transform duration-300 group"
     >
-      <span className="font-['Geist',sans-serif] text-[48px] md:text-[64px] font-bold text-[#E8E6E1] leading-none">
+      <span className="font-['Geist',sans-serif] text-[48px] md:text-[64px] font-bold text-[#E8E6E1] leading-none group-hover:text-[#0F0E0C] transition-colors duration-300">
         {number}
       </span>
       <div className="pt-2">
@@ -320,5 +399,49 @@ function StepItem({ number, title, description }) {
         <p className="text-[#6B6760] text-lg leading-relaxed max-w-2xl">{description}</p>
       </div>
     </motion.div>
+  );
+}
+
+function TestimonialCard({ quote, name, role }) {
+  return (
+    <motion.div 
+      variants={fadeUp}
+      className="bg-white border border-[#E8E6E1] rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300"
+    >
+      <p className="text-[#0F0E0C] text-lg leading-relaxed mb-8">"{quote}"</p>
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-full bg-[#E8E6E1] flex items-center justify-center text-[#6B6760] font-medium font-['Geist',sans-serif]">
+          {name.charAt(0)}
+        </div>
+        <div>
+          <p className="font-['Geist',sans-serif] font-semibold text-[#0F0E0C]">{name}</p>
+          <p className="text-[#6B6760] text-sm">{role}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function FaqItem({ question, answer }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="py-6">
+      <button 
+        onClick={() => setIsOpen(!isOpen)} 
+        className="flex w-full items-center justify-between text-left group"
+      >
+        <span className="font-['Geist',sans-serif] text-lg font-semibold text-[#0F0E0C] group-hover:text-[#6B6760] transition-colors">{question}</span>
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} className="text-[#A8A49F] group-hover:text-[#0F0E0C] transition-colors">
+          <ChevronDown className="w-5 h-5" />
+        </motion.div>
+      </button>
+      <motion.div 
+        initial={false}
+        animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+        className="overflow-hidden"
+      >
+        <p className="pt-4 text-[#6B6760] leading-relaxed">{answer}</p>
+      </motion.div>
+    </div>
   );
 }
