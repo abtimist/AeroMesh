@@ -87,6 +87,9 @@ export default function LandingPage() {
                 <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">ESA SENTINEL</span>
                 <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">OPEN-METEO</span>
                 <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">BRICS FEDERATION</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">EPA</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">UNEP</span>
+                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">COPERNICUS</span>
               </div>
             ))}
           </motion.div>
@@ -140,16 +143,21 @@ export default function LandingPage() {
         </section>
 
         {/* Abstract App Preview */}
-        <section className="pb-32 w-full">
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="w-full border-y border-[#E8E6E1] shadow-[0_20px_60px_rgba(0,0,0,0.15)] bg-[#0F0E0C] relative"
-          >
-            <img src="/dashboard_screenshot.jpg" alt="AeroMesh Interface" className="w-full h-auto object-cover" />
-          </motion.div>
+        <section className="px-6 pb-32">
+          <div className="max-w-[1000px] mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8 }}
+              className="relative rounded-2xl border border-[#E8E6E1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#F7F6F2] to-white z-0 opacity-50 pointer-events-none"></div>
+              <div className="relative z-10 rounded-xl overflow-hidden bg-[#0F0E0C] aspect-[16/10] flex items-center justify-center border border-[#E8E6E1] shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
+                <img src="/dashboard_screenshot.jpg" alt="AeroMesh Interface" className="w-full h-full object-cover" />
+              </div>
+            </motion.div>
+          </div>
         </section>
 
         {/* Features Section */}
