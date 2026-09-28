@@ -150,9 +150,51 @@ export default function LandingPage() {
               className="relative rounded-2xl border border-[#E8E6E1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-[#F7F6F2] to-white z-0 opacity-50 pointer-events-none"></div>
-              <div className="relative z-10 rounded-xl overflow-hidden bg-[#0F0E0C] aspect-video flex items-center justify-center">
-                <img src="/test_smoke.jpg" alt="AeroMesh Interface" className="w-full h-full object-cover opacity-80 mix-blend-screen" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F0E0C] to-transparent"></div>
+              <div className="relative z-10 rounded-xl overflow-hidden bg-white border border-[#E8E6E1] aspect-[16/10] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                {/* Window Header */}
+                <div className="h-12 border-b border-[#E8E6E1] bg-[#F7F6F2] flex items-center px-4 gap-2 shrink-0">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#ef4444] opacity-80"></div>
+                    <div className="w-3 h-3 rounded-full bg-[#eab308] opacity-80"></div>
+                    <div className="w-3 h-3 rounded-full bg-[#22c55e] opacity-80"></div>
+                  </div>
+                  <div className="mx-auto w-1/3 h-6 bg-white border border-[#E8E6E1] rounded-md flex items-center justify-center">
+                    <div className="w-16 h-2 bg-[#E8E6E1] rounded-full"></div>
+                  </div>
+                </div>
+                {/* Window Body */}
+                <div className="flex-1 flex bg-[#F7F6F2]">
+                  {/* Sidebar */}
+                  <div className="hidden sm:flex w-48 border-r border-[#E8E6E1] bg-white p-4 flex-col gap-4 shrink-0">
+                    <div className="w-full h-8 bg-[#F7F6F2] rounded-md mb-4 flex items-center px-2"><div className="w-1/2 h-2 bg-[#E8E6E1] rounded-full"></div></div>
+                    <div className="w-3/4 h-3 bg-[#E8E6E1] rounded-full"></div>
+                    <div className="w-1/2 h-3 bg-[#E8E6E1] rounded-full"></div>
+                    <div className="w-2/3 h-3 bg-[#E8E6E1] rounded-full"></div>
+                    <div className="mt-8 w-full h-32 bg-[#F7F6F2] rounded-md border border-[#E8E6E1]"></div>
+                  </div>
+                  {/* Main Viewport */}
+                  <div className="flex-1 p-4 sm:p-6 flex flex-col gap-4">
+                    <div className="w-1/3 h-8 bg-white border border-[#E8E6E1] rounded-md shadow-sm"></div>
+                    <div className="flex-1 bg-white border border-[#E8E6E1] rounded-lg shadow-sm relative overflow-hidden">
+                      {/* Map abstract pattern */}
+                      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #0F0E0C 2px, transparent 2px)', backgroundSize: '24px 24px' }}></div>
+                      
+                      {/* Abstract Heatmap Blob */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#ef4444] rounded-full mix-blend-multiply filter blur-[64px] opacity-20"></div>
+                      <div className="absolute top-1/3 left-1/3 w-48 h-48 bg-[#eab308] rounded-full mix-blend-multiply filter blur-[48px] opacity-30"></div>
+                      
+                      {/* Floating Panels */}
+                      <div className="absolute top-4 right-4 w-32 h-24 bg-white/90 backdrop-blur-sm border border-[#E8E6E1] rounded-md shadow-sm p-3 flex flex-col gap-3">
+                        <div className="w-1/2 h-2 bg-[#0F0E0C] rounded-full opacity-20"></div>
+                        <div className="w-full flex-1 bg-[#F7F6F2] rounded-sm"></div>
+                      </div>
+                      <div className="absolute bottom-4 left-4 w-48 h-12 bg-white/90 backdrop-blur-sm border border-[#E8E6E1] rounded-md shadow-sm p-3 flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#22c55e] opacity-20"></div>
+                        <div className="flex-1 h-2 bg-[#E8E6E1] rounded-full"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
