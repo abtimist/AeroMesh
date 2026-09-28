@@ -46,7 +46,7 @@ export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode,
       }}
     >
       {/* ── Logo ── */}
-      <div className="flex items-center gap-2.5 shrink-0" style={{ width: 'var(--sidebar-width)' }}>
+      <div className="flex items-center gap-2.5 shrink-0 min-w-max">
         <img src="/icon.png" alt="AeroMesh Icon" className="w-8 h-8 object-contain" />
         <span className="font-semibold text-sm tracking-tight" style={{ color: text }}>
           AeroMesh
