@@ -38,7 +38,7 @@ function MapClickListener({ onMapClick }) {
 }
 
 function ZoomListener({ setZoom }) {
-  useMapEvents({ zoom: e => setZoom(e.target.getZoom()) });
+  useMapEvents({ zoomend: e => setZoom(e.target.getZoom()) });
   return null;
 }
 
@@ -132,7 +132,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
         <ZoomListener setZoom={setCurrentZoom} />
         {layers.wind && <Suspense fallback={null}><WindVelocityLayer data={vectors} /></Suspense>}
         {layers.sensors && sensors.map(s => (
-          <CircleMarker key={'sensor-' + s.id} center={[s.lat, s.lon]} radius={getRadius(s.lat, 25000, 10)}
+          <CircleMarker key={'sensor-' + s.id} center={[s.lat, s.lon]} radius={getRadius(s.lat, 25000, 6)}
             pathOptions={{ color: s.provenance_status === 'verified' ? '#22c55e' : '#94a3b8', fillOpacity: future ? 0.35 : 0.8, weight: 1 }}>
             <Tooltip className="dark-tooltip" direction="top">
               <div className="text-xs text-left">
@@ -146,7 +146,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           </CircleMarker>
         ))}
         {layers.fire && events.map(event => (
-          <CircleMarker key={'event-' + event.id} center={[event.lat, event.lon]} radius={getRadius(event.lat, 20000, 12)}
+          <CircleMarker key={'event-' + event.id} center={[event.lat, event.lon]} radius={getRadius(event.lat, 20000, 8)}
             pathOptions={{ color: '#f97316', fillOpacity: future ? 0.45 : 0.9, weight: 1 }}
             eventHandlers={{ click: () => setSelectedEvent(event.id) }}>
             <Tooltip className="dark-tooltip">
