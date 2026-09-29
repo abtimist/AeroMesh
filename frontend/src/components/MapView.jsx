@@ -37,6 +37,11 @@ function MapClickListener({ onMapClick }) {
   return null;
 }
 
+function ZoomListener({ setZoom }) {
+  useMapEvents({ zoom: e => setZoom(e.target.getZoom()) });
+  return null;
+}
+
 export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode, inspectMode, setInspectMode, mapType = 'satellite', layers }) {
   const [searchParams] = useSearchParams();
   const { dark } = useTheme();
@@ -57,7 +62,14 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   }, [searchParams]);
   const [demo, setDemo] = useState(null);
   const [clickedLocation, setClickedLocation] = useState(null);
+  const [currentZoom, setCurrentZoom] = useState(config.zoom);
   const [now, setNow] = useState(() => Date.now());
+
+  // Helper for dynamic marker sizing
+  const getRadius = (lat, meters, maxPixels) => {
+    const mpp = (40075016 * Math.cos(lat * Math.PI / 180)) / Math.pow(2, currentZoom + 8);
+    return Math.max(2, Math.min(meters / mpp, maxPixels));
+  };
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
@@ -92,9 +104,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           attribution={mapType === 'satellite' ? 'Tiles © Esri — background imagery, not dated event evidence' : '© OpenStreetMap contributors'}
           className={mapType === 'satellite' ? 'darkened-satellite' : ''}
         />
+        <ZoomListener setZoom={setCurrentZoom} />
         {layers.wind && <Suspense fallback={null}><WindVelocityLayer data={vectors} /></Suspense>}
         {layers.sensors && sensors.map(s => (
-          <CircleMarker key={'sensor-' + s.id} center={[s.lat, s.lon]} radius={6}
+          <CircleMarker key={'sensor-' + s.id} center={[s.lat, s.lon]} radius={getRadius(s.lat, 25000, 10)}
             pathOptions={{ color: s.provenance_status === 'verified' ? '#22c55e' : '#94a3b8', fillOpacity: future ? 0.35 : 0.8, weight: 1 }}>
             <Tooltip className="dark-tooltip" direction="top">
               <div className="text-xs text-left">
@@ -108,7 +121,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
           </CircleMarker>
         ))}
         {layers.fire && events.map(event => (
-          <CircleMarker key={'event-' + event.id} center={[event.lat, event.lon]} radius={8}
+          <CircleMarker key={'event-' + event.id} center={[event.lat, event.lon]} radius={getRadius(event.lat, 20000, 12)}
             pathOptions={{ color: '#f97316', fillOpacity: future ? 0.45 : 0.9, weight: 1 }}
             eventHandlers={{ click: () => setSelectedEvent(event.id) }}>
             <Tooltip className="dark-tooltip">
