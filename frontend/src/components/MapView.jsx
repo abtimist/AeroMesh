@@ -56,9 +56,14 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   const forecast = forecastResource.data;
   const [selection, setSelection] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [zoomTarget, setZoomTarget] = useState(null);
+
   useEffect(() => {
     const id = Number(searchParams.get('event'));
-    if (Number.isSafeInteger(id) && id > 0) setSelectedEvent(id);
+    if (Number.isSafeInteger(id) && id > 0) {
+      setSelectedEvent(id);
+      setZoomTarget(id);
+    }
   }, [searchParams]);
   const [demo, setDemo] = useState(null);
   const [clickedLocation, setClickedLocation] = useState(null);
@@ -73,16 +78,17 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
     setMapZoom(config.zoom);
   }, [config.key]);
 
-  // Fly to event when selected (e.g. from View on Map button)
+  // Fly to event when selected (ONLY from View on Map button via URL)
   useEffect(() => {
-    if (selectedEvent && events.length > 0) {
-      const ev = events.find(e => e.id === selectedEvent);
+    if (zoomTarget && events.length > 0) {
+      const ev = events.find(e => e.id === zoomTarget);
       if (ev) {
         setMapCenter([ev.lat, ev.lon]);
         setMapZoom(14); // Zoom in closely
+        setZoomTarget(null); // Clear it so it only fires once
       }
     }
-  }, [selectedEvent, events]);
+  }, [zoomTarget, events]);
 
   // Helper for dynamic marker sizing
   const getRadius = (lat, meters, maxPixels) => {
