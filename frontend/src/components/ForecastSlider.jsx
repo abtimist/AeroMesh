@@ -17,8 +17,9 @@ export default function ForecastSlider({ forecast, times = [], selectedAt, onCha
           <p>25 regional sample points. AOD is column aerosol, not surface PM2.5.</p>
           <p>Retrieved {new Date(forecast.fetched_at).toLocaleString()} · model issue time not supplied.</p>
         </>}
-        <p>{plumeCount ? `${plumeCount} HYSPLIT contours · relative dispersion` : 'No HYSPLIT contours for this time.'}</p>
-        {dispersionStatus?.status === 'unavailable' && <p className="text-amber-300">Live dispersion is not configured. The historical HYSPLIT demo is available separately.</p>}
+        <p>{plumeCount ? `${plumeCount} model contours · relative tracer; see each contour's source` : 'No model contours for this time.'}</p>
+        {dispersionStatus?.live_transport?.status === 'available' && <p>Live GFS transport is available from an event's evidence panel. Not HYSPLIT or PM2.5 concentration.</p>}
+        {dispersionStatus?.status === 'unavailable' && <p className="text-amber-300">Optional NOAA READY is not configured. Historical HYSPLIT replay is separate from live transport.</p>}
         <p>Sensors and fires remain dated observations; they do not predict future detections.</p>
       </div>
     </section>

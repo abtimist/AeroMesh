@@ -12,6 +12,7 @@ from app.models import sensor, weather, event, report
 from app.models import forecast as forecast_models
 from app.services.forecast_service import forecast_service
 from app.services.hysplit import hysplit_worker
+from app.services.transport import transport_worker
 import asyncio
 
 @asynccontextmanager
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(index.create, engine, checkfirst=True)
     await forecast_service.start()
     await hysplit_worker.start()
+    await asyncio.to_thread(transport_worker.recover)
     start_scheduler()
     try:
         yield

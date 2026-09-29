@@ -12,4 +12,6 @@ APScheduler>=3.10.4
 
 Pillow>=10.2.0
 python-multipart>=0.0.9
+numpy>=2.0
+contourpy>=1.3
 

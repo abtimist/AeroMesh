@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 import json
 from typing import Literal
 from fastapi import APIRouter, Depends, Response
@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.sensor import Sensor, Measurement
 from app.models.event import PollutionEvent
-from app.models.forecast import MeasurementEvidence
+from app.models.forecast import MeasurementEvidence, ForecastSnapshot
 from app.core.regions import regional_query
 from app.core.cache import observations_cache
 
@@ -27,7 +27,9 @@ def sensor_records(db, node=None):
              "lat": s.lat, "lon": s.lon, "pm25": value, "location": s.name,
              "source": source or s.provider, "kind": "observation", "units": "µg/m³",
              "provenance_status": "verified" if source else "unverified",
-             "status": "available" if value is not None else "unavailable",
+             "status": ("unavailable" if value is None else "stale" if timestamp and
+                        datetime.now(timezone.utc) - timestamp.replace(tzinfo=timestamp.tzinfo or timezone.utc) > timedelta(hours=6)
+                        else "available"),
              "timestamp": utc_iso(timestamp)} for s, value, timestamp, source in rows]
 
 def event_record(row):
@@ -59,6 +61,11 @@ def cached_response(key, factory):
 @router.get("/sensors")
 def get_sensors(node: Node | None = None, db: Session = Depends(get_db)):
     return cached_response(("sensors", node), lambda: sensor_records(db, node))
+
+@router.get("/providers/openaq")
+def openaq_health(db: Session = Depends(get_db)):
+    row = db.get(ForecastSnapshot, "openaq:health")
+    return row.payload if row else {"status": "not_checked", "source": "OpenAQ v3"}
 
 @router.get("/events")
 def get_events(node: Node | None = None, db: Session = Depends(get_db)):

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { API_BASE, fetchJSON, useResource } from '../api';
+import LiveTransportForm from './LiveTransportForm';
 
 export default function AIEvidencePanel({ event, onClose, onDemo, modelStatus }) {
   const { data, loading, error } = useResource(`/api/evidence/${event.id}`, 15000);
@@ -58,11 +59,12 @@ export default function AIEvidencePanel({ event, onClose, onDemo, modelStatus })
           </div>
           <p className="text-xs text-gray-400">Sensor anomaly: unavailable. {data.sensor_anomaly.reason}</p>
           <p className="text-xs text-gray-400">Alert dispatch: unavailable. {data.dispatch.reason}</p>
-          <div className="text-sm space-y-2"><h3 className="font-semibold">HYSPLIT runs</h3>
+          <div className="text-sm space-y-2"><h3 className="font-semibold">Transport / HYSPLIT runs</h3>
             {!data.dispersion_runs.length && <p className="text-gray-400">No model run for this event.</p>}
             {data.dispersion_runs.map(run => <p key={run.id}>{run.status} · {new Date(run.created_at).toLocaleString()}{run.error ? ` — ${run.error}` : ''}</p>)}
           </div>
         </>}
+        <LiveTransportForm eventId={event.id} />
         <p className="text-xs text-amber-300">{modelStatus?.message || 'Checking dispersion configuration…'}</p>
         <button onClick={onDemo} className="w-full rounded-lg border border-amber-600 text-amber-200 px-4 py-2">View historical HYSPLIT demonstration</button>
         {modelStatus?.status === 'configured' && <details className="text-sm">

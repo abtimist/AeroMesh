@@ -121,7 +121,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
             style={{ color: '#f87171', weight: 1, fillOpacity: 0.2 }}
             onEachFeature={(feature, layer) => {
               const p = feature.properties;
-              layer.bindTooltip('HYSPLIT relative dispersion · ' + dateText(p.valid_from) + ' to ' + dateText(p.valid_to) + ' · layer 0–' + p.averaged_layer_top_m + ' m');
+              layer.bindTooltip((p.source || 'NOAA HYSPLIT / READY') + ' · ' + (p.temporal_kind || 'interval') + ' · ' + dateText(p.valid_to) + (p.averaged_layer_top_m ? ' · layer 0–' + p.averaged_layer_top_m + ' m' : ' · relative tracer, not PM2.5'));
               layer.on('click', () => setSelectedEvent(p.event_id));
             }} />
         )}
