@@ -271,24 +271,57 @@ def assignments(event_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/events/{event_id}/assignments", status_code=201, dependencies=[Depends(operator)])
-def assign(event_id: int, body: AssignmentInput, db: Session = Depends(get_db)):
+async def assign(event_id: int, body: AssignmentInput, db: Session = Depends(get_db)):
     event = db.get(PollutionEvent, event_id)
     if not event:
         raise HTTPException(404, "Event not found")
+    
     candidates = []
+    # Pre-filter with Haversine distance to avoid querying OSRM for resources on the other side of the world
     for resource in db.query(ResponseResource).filter_by(enabled=1, capability=body.capability, busy_assignment_id=None):
-        distance = distance_km(event.lat, event.lon, resource.lat, resource.lon)
-        if distance <= resource.service_radius_km:
-            candidates.append((distance, resource.id, resource))
-    for distance, _, resource in sorted(candidates):
+        if distance_km(event.lat, event.lon, resource.lat, resource.lon) <= resource.service_radius_km * 2:
+            candidates.append(resource)
+            
+    if not candidates:
+        raise HTTPException(409, "No available resource with the requested capability and service radius")
+
+    # Use OSRM for real driving distance and time
+    scored_candidates = []
+    async with httpx.AsyncClient(timeout=10) as client:
+        for resource in candidates:
+            url = f"http://router.project-osrm.org/route/v1/driving/{resource.lon},{resource.lat};{event.lon},{event.lat}?overview=false"
+            try:
+                r = await client.get(url)
+                if r.status_code == 200:
+                    data = r.json()
+                    if data.get("code") == "Ok":
+                        dist_km = data["routes"][0]["distance"] / 1000.0
+                        eta_min = data["routes"][0]["duration"] / 60.0
+                        if dist_km <= resource.service_radius_km:
+                            scored_candidates.append((eta_min, dist_km, resource.id, resource))
+                        continue
+            except Exception as e:
+                logger.warning(f"OSRM routing failed for resource {resource.id}: {e}")
+            
+            # Fallback to straight line distance
+            dist_km = distance_km(event.lat, event.lon, resource.lat, resource.lon)
+            if dist_km <= resource.service_radius_km:
+                scored_candidates.append((dist_km * 2, dist_km, resource.id, resource)) # Penalize ETA for fallback
+
+    if not scored_candidates:
+        raise HTTPException(409, "No available resource within driving distance")
+
+    for eta, distance, _, resource in sorted(scored_candidates):
         ident = str(uuid.uuid4())
         reserved = db.execute(update(ResponseResource).where(ResponseResource.id == resource.id,
             ResponseResource.busy_assignment_id.is_(None), ResponseResource.enabled == 1).values(busy_assignment_id=ident, updated_at=now())).rowcount
         if not reserved:
             continue
+        
+        note_with_eta = f"{body.note} (ETA: {eta:.0f} mins)" if eta else body.note
         row = ResourceAssignment(id=ident, event_id=event_id, active_event_id=event_id,
             resource_id=resource.id, resource_name=resource.name, status="assigned", distance_km=distance,
-            note=body.note, audit=[{"status": "assigned", "at": now().isoformat(), "note": body.note}], created_at=now(), updated_at=now())
+            note=note_with_eta, audit=[{"status": "assigned", "at": now().isoformat(), "note": note_with_eta}], created_at=now(), updated_at=now())
         try:
             db.add(row); db.commit(); db.refresh(row)
         except IntegrityError:
