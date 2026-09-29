@@ -33,8 +33,15 @@ function ReportResult({ id }) {
         <p className="text-xs text-amber-200">{report.result.interpretation}</p>
         <p className="text-xs text-slate-400">{report.result.model} · {report.result.inference_ms} ms</p>
       </>}
-      {report.event_id && <p>Linked unverified event #{report.event_id} is available for operator review on the map.</p>}
-      <a href={API_BASE + report.image_url} target="_blank" rel="noreferrer" className="text-blue-300 underline">View submitted photo</a>
+      {report.event_id && (
+        <div className="space-y-3 mt-2 mb-2 p-3 bg-blue-900/20 rounded-xl border border-blue-500/30">
+          <p>Linked unverified event #{report.event_id} is available for operator review on the map.</p>
+          <Link to={`/map?event=${report.event_id}`} className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            View on Map
+          </Link>
+        </div>
+      )}
+      <a href={API_BASE + report.image_url} target="_blank" rel="noreferrer" className="text-blue-300 underline block mt-2">View submitted photo</a>
     </>}
   </article>;
 }
