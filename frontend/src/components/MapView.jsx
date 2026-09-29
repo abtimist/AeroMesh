@@ -62,8 +62,27 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   }, [searchParams]);
   const [demo, setDemo] = useState(null);
   const [clickedLocation, setClickedLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState(config.center);
+  const [mapZoom, setMapZoom] = useState(config.zoom);
   const [currentZoom, setCurrentZoom] = useState(config.zoom);
   const [now, setNow] = useState(() => Date.now());
+
+  // Fly to node center when switching regions
+  useEffect(() => {
+    setMapCenter(config.center);
+    setMapZoom(config.zoom);
+  }, [config.key]);
+
+  // Fly to event when selected (e.g. from View on Map button)
+  useEffect(() => {
+    if (selectedEvent && events.length > 0) {
+      const ev = events.find(e => e.id === selectedEvent);
+      if (ev) {
+        setMapCenter([ev.lat, ev.lon]);
+        setMapZoom(14); // Zoom in closely
+      }
+    }
+  }, [selectedEvent, events]);
 
   // Helper for dynamic marker sizing
   const getRadius = (lat, meters, maxPixels) => {
@@ -98,7 +117,7 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   return (
     <div className="relative w-full h-full" style={{ background: dark ? '#0d1117' : '#e8ecf0' }}>
       <MapContainer center={config.center} zoom={config.zoom} minZoom={3} maxZoom={18} preferCanvas scrollWheelZoom worldCopyJump style={{ height: '100%', width: '100%' }}>
-        <MapController center={config.center} zoom={config.zoom} />
+        <MapController center={mapCenter} zoom={mapZoom} />
         <TileLayer
           url={mapType === 'satellite' ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
           attribution={mapType === 'satellite' ? 'Tiles © Esri — background imagery, not dated event evidence' : '© OpenStreetMap contributors'}
