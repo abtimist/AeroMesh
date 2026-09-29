@@ -83,7 +83,7 @@ export default function CitizenPortalPage() {
     } catch (err) { setError(err.message); } finally { setUploading(false); }
   }
   const weather = conditions.data?.weather, air = conditions.data?.air_quality;
-  return <main className="min-h-screen bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
+  return <main className="h-screen overflow-y-auto bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
     <div className="max-w-2xl mx-auto space-y-6">
       <Link to="/" className="inline-flex gap-2 text-slate-300"><ArrowLeft size={18} /> AeroMesh home</Link>
       <header><h1 className="text-3xl font-bold">Citizen portal</h1><p className="text-slate-400 mt-2">Report visible smoke or fire with a photo and an explicit location.</p></header>
