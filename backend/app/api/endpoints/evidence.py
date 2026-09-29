@@ -46,17 +46,18 @@ def evidence(event_id: int, db: Session = Depends(get_db)):
     return {"event_id": event.id, "lat": event.lat, "lon": event.lon,
         "observed_at": utc_iso(event.detected_at), "event_type": event.event_type,
         "fire": {"status": "available" if fire else "unavailable",
-                 "source": fire.source if fire else None,
+                 "source": fire.source if fire else "Citizen photo / local classifier (unverified)" if event.event_type.startswith("citizen_") else None,
                  "frp_mw": fire.frp_mw if fire else None,
                  "confidence_category": fire.confidence if fire else None,
                  "satellite": fire.satellite if fire else None,
                  "instrument": fire.instrument if fire else None,
-                 "note": None if fire else "This legacy record has no verified upstream evidence."},
+                 "note": None if fire else "Local photo classification requires human review; it is not satellite confirmation." if event.event_type.startswith("citizen_") else "This legacy record has no verified upstream evidence."},
         "satellite": satellite.metadata(event),
         "nearby_measurements": nearby_measurements(db, event),
         "dispersion_runs": [{"id": r.id, "status": r.status, "created_at": utc_iso(r.created_at), "error": r.error} for r in runs],
         "sensor_anomaly": {"status": "unavailable", "reason": "No validated baseline analysis is associated with this event."},
-        "dispatch": {"status": "unavailable", "reason": "No verified dispatch receipt."}}
+        "dispatch": {"status": "available", "mode": "dispatch_simulation", "external_agency_contacted": False,
+                     "assignments_url": f"/api/citizen/events/{event.id}/assignments"}}
 
 @router.get("/{event_id}/satellite.png")
 async def satellite_image(event_id: int, db: Session = Depends(get_db)):

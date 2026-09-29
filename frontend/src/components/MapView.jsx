@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, GeoJSON, Rectangle, CircleMarker, Circle, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import AlertPanel from './AlertPanel';
@@ -37,6 +38,7 @@ function MapClickListener({ onMapClick }) {
 }
 
 export default function MapView({ activeNode = 'India Node', alertPanelOpen, onAlertPanelClose, measureMode, inspectMode, setInspectMode, mapType = 'satellite', layers }) {
+  const [searchParams] = useSearchParams();
   const { dark } = useTheme();
   const config = NODE_CONFIG[activeNode] || NODE_CONFIG['India Node'];
   const sensorResource = useResource('/api/data/sensors?node=all');
@@ -49,6 +51,10 @@ export default function MapView({ activeNode = 'India Node', alertPanelOpen, onA
   const forecast = forecastResource.data;
   const [selection, setSelection] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  useEffect(() => {
+    const id = Number(searchParams.get('event'));
+    if (Number.isSafeInteger(id) && id > 0) setSelectedEvent(id);
+  }, [searchParams]);
   const [demo, setDemo] = useState(null);
   const [clickedLocation, setClickedLocation] = useState(null);
   const [now, setNow] = useState(() => Date.now());

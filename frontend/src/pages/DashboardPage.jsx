@@ -25,7 +25,7 @@ export default function DashboardPage({ activeNode, setActiveNode, initialPanel 
   }, [initialPanel]);
 
   return (
-    <DashboardLayout alertCount={3} activeNode={activeNode} setActiveNode={setActiveNode}>
+    <DashboardLayout activeNode={activeNode} setActiveNode={setActiveNode}>
       {/* MapView fills 100% of the content area */}
       <MapView
         activeNode={activeNode}

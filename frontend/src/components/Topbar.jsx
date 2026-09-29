@@ -1,185 +1,49 @@
-// Topbar — desktop command center header
-// Has dark/light mode toggle, node switcher, role switcher, notifications, user profile
-
 import { useState, useRef, useEffect } from 'react';
-import { Bell, ChevronDown, Search, Sun, Moon } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Bell, Search, Sun, Moon } from 'lucide-react';
+import { useResource } from '../api';
 
-const NODES = ['India Node', 'Brazil Node', 'China Node', 'South Africa Node'];
-const ROLES = ['Admin Officer', 'Regional Inspector', 'Citizen'];
-
-export default function Topbar({ alertCount = 3, dark, onToggleDark, activeNode, setActiveNode }) {
-  const [role, setRole] = useState('Admin Officer');
-  
-  // Single state to manage which dropdown is open (prevents overlapping)
-  const [activeDropdown, setActiveDropdown] = useState(null); 
-  const topbarRef = useRef(null);
-
-  // Close dropdowns if clicking outside
+export default function Topbar({ dark, onToggleDark }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+  const navigate = useNavigate();
+  const events = useResource('/api/data/events?node=all');
+  const records = events.data || [];
+  const matches = records.filter(event => `${event.id} ${event.event_type} ${event.source} ${event.lat} ${event.lon}`.toLowerCase().includes(query.trim().toLowerCase()));
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (topbarRef.current && !topbarRef.current.contains(event.target)) {
-        setActiveDropdown(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const close = e => { if (!ref.current?.contains(e.target)) { setOpen(false); setQuery(''); } };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
   }, []);
-
-  const toggleDropdown = (menuName) => {
-    setActiveDropdown(prev => prev === menuName ? null : menuName);
-  };
-
-  const surface = 'var(--color-topbar-bg)';
-  const border  = 'var(--color-border)';
-  const text    = 'var(--color-text-primary)';
-  const muted   = 'var(--color-text-secondary)';
-  const inputBg = 'var(--color-input-bg)';
-
-  return (
-    <header
-      ref={topbarRef}
-      className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-between px-4 z-[1000] rounded-[24px] backdrop-blur-md border shadow-2xl transition-all duration-300 w-[calc(100%-2rem)] md:w-auto md:min-w-[700px]"
-      style={{
-        height: 'var(--topbar-height)',
-        background: dark ? 'rgba(15, 15, 20, 0.75)' : 'rgba(255, 255, 255, 0.85)',
-        borderColor: dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-      }}
-    >
-      {/* ── Logo ── */}
-      <div className="flex items-center gap-2.5 shrink-0 min-w-max">
-        <img src="/icon.png" alt="AeroMesh Icon" className="w-8 h-8 object-contain" />
-        <span className="font-semibold text-sm tracking-tight" style={{ color: text }}>
-          AeroMesh
-        </span>
+  function select(event) {
+    setQuery(''); setOpen(false);
+    navigate(`/map?event=${event.id}`);
+  }
+  return <header ref={ref} onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setQuery(''); } }}
+    className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-between gap-3 px-3 sm:px-4 z-[1000] rounded-3xl backdrop-blur-md border shadow-xl w-[calc(100%-2rem)] max-w-3xl h-16"
+    style={{ background: dark ? 'rgba(15,15,20,.9)' : 'rgba(255,255,255,.94)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}>
+    <Link to="/" aria-label="AeroMesh home" className="flex items-center gap-2 shrink-0"><img src="/icon.png" alt="" className="w-8 h-8" /><span className="font-semibold text-sm hidden sm:inline">AeroMesh</span></Link>
+    <form role="search" className="flex-1 min-w-0 relative" onSubmit={e => { e.preventDefault(); if (matches.length) select(matches[0]); }}>
+      <Search aria-hidden="true" size={16} className="absolute left-3 top-3" />
+      <input aria-label="Search recorded events by ID, type, source or coordinates" placeholder="Search recorded events" value={query} onChange={e => { setQuery(e.target.value); setOpen(false); }} className="w-full rounded-full pl-9 pr-3 py-2 text-sm border border-slate-500/30 bg-transparent" />
+    </form>
+    <Link to="/report" className="text-xs sm:text-sm whitespace-nowrap text-blue-500">Report</Link>
+    <button onClick={onToggleDark} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="p-2 rounded-xl">{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
+    <button onClick={() => { setOpen(!open); setQuery(''); }} aria-label="Show recorded events" aria-expanded={open} className="relative p-2 rounded-xl"><Bell size={19} />{records.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-500" />}</button>
+    {(open || query.trim()) && <section aria-label="Recorded events" className="absolute top-full mt-2 left-0 right-0 border rounded-2xl shadow-xl overflow-hidden" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+      <h2 className="p-4 text-sm font-semibold">{query.trim() ? `${matches.length} matching records` : `${records.length} recorded events`}</h2>
+      <div className="max-h-72 overflow-y-auto px-2 pb-2">
+        {events.error && <p role="alert" className="p-3 text-sm">Events unavailable: {events.error}</p>}
+        {events.loading && <p className="p-3 text-sm">Loading recorded events…</p>}
+        {!events.loading && !events.error && !matches.length && <p className="p-3 text-sm">No matching events recorded.</p>}
+        {matches.slice(0, 30).map(event => <button key={event.id} onClick={() => select(event)} className="w-full text-left rounded-xl p-3 hover:bg-blue-500/10 focus-visible:bg-blue-500/10">
+          <span className="block text-sm font-medium">#{event.id} · {event.event_type.replaceAll('_', ' ')}</span>
+          <span className="block text-xs opacity-70">{event.lat.toFixed(3)}, {event.lon.toFixed(3)} · {new Date(event.detected_at).toLocaleString()}</span>
+          <span className="block text-xs opacity-70">{event.source} · {event.provenance_status}</span>
+        </button>)}
+        {matches.length > 30 && <p className="p-3 text-xs opacity-70">Showing the latest 30 matches. Search to narrow the list.</p>}
       </div>
-
-      {/* ── Search ── */}
-      <div className="flex-1 max-w-[150px] md:max-w-sm mx-2 md:mx-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: muted }} />
-          <input
-            type="search"
-            placeholder="Search locations, sensors, events…"
-            className="w-full pl-9 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-300"
-            style={{
-              background: dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-              border: `1px solid ${dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
-              color: text,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* ── Right controls ── */}
-      <div className="flex items-center gap-2">
-
-        {/* Role switcher — for hackathon judges */}
-        <div className="relative hidden sm:block">
-          <button
-            onClick={() => toggleDropdown('role')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:opacity-80"
-            style={{ 
-              background: dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', 
-              border: `1px solid ${dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`, 
-              color: muted 
-            }}
-          >
-            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
-            {role}
-            <ChevronDown className={`w-3 h-3 transition-transform ${activeDropdown === 'role' ? 'rotate-180' : ''}`} style={{ color: muted }} />
-          </button>
-          {activeDropdown === 'role' && (
-            <div
-              className="absolute right-0 top-full mt-1 w-48 rounded-xl shadow-xl py-1 z-50 border"
-              style={{ background: surface, borderColor: border }}
-            >
-              <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-medium" style={{ color: muted }}>
-                View as
-              </p>
-              {ROLES.map(r => (
-                <button
-                  key={r}
-                  onClick={() => { setRole(r); setActiveDropdown(null); }}
-                  className="w-full text-left px-3 py-2 text-sm transition hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                  style={{ color: role === r ? '#2563eb' : text, fontWeight: role === r ? 600 : 400 }}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-
-
-        {/* Dark/Light toggle */}
-        <button
-          onClick={onToggleDark}
-          title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="p-2 rounded-lg transition"
-          style={{ color: muted }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
-
-        {/* Notification bell */}
-        <div className="relative">
-          <button
-            onClick={() => toggleDropdown('notifications')}
-            className="relative p-2 rounded-lg transition"
-            style={{ color: muted, background: activeDropdown === 'notifications' ? 'var(--color-surface-hover)' : 'transparent' }}
-            onMouseEnter={e => { if (activeDropdown !== 'notifications') e.currentTarget.style.background = 'var(--color-surface-hover)'; }}
-            onMouseLeave={e => { if (activeDropdown !== 'notifications') e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Bell className="w-5 h-5" />
-            {alertCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2"
-                style={{ '--tw-ring-color': surface }} />
-            )}
-          </button>
-          
-          {activeDropdown === 'notifications' && (
-             <div
-             className="absolute right-0 top-full mt-1 w-72 rounded-xl shadow-xl py-2 z-50 border"
-             style={{ background: surface, borderColor: border }}
-           >
-             <div className="flex items-center justify-between px-3 py-1 mb-1">
-               <p className="text-xs font-semibold" style={{ color: text }}>Notifications</p>
-               <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">{alertCount} New</span>
-             </div>
-             <div className="border-t max-h-64 overflow-y-auto" style={{ borderColor: border }}>
-               <div className="px-3 py-2 border-b hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition" style={{ borderColor: border }}>
-                 <p className="text-xs font-medium" style={{ color: text }}>🚨 EV-9942: Hazmat Plume</p>
-                 <p className="text-[10px] mt-0.5" style={{ color: muted }}>Okhla Industrial Area · 2m ago</p>
-               </div>
-               <div className="px-3 py-2 border-b hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition" style={{ borderColor: border }}>
-                 <p className="text-xs font-medium" style={{ color: text }}>🔥 EV-0081: Stubble Burning</p>
-                 <p className="text-[10px] mt-0.5" style={{ color: muted }}>Haryana (Panipat) · 15m ago</p>
-               </div>
-               <div className="px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
-                 <p className="text-xs font-medium" style={{ color: text }}>⚠️ EV-0105: PM2.5 Spike</p>
-                 <p className="text-[10px] mt-0.5" style={{ color: muted }}>Noida (Sec 125) · 1h ago</p>
-               </div>
-             </div>
-           </div>
-          )}
-        </div>
-
-        {/* User avatar */}
-        <button
-          className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-lg transition"
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold select-none">
-            JD
-          </div>
-          <span className="text-sm font-medium hidden sm:block" style={{ color: text }}>Jane D.</span>
-          <ChevronDown className="w-3 h-3 hidden sm:block" style={{ color: muted }} />
-        </button>
-      </div>
-    </header>
-  );
+    </section>}
+  </header>;
 }

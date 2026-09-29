@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { API_BASE, fetchJSON, useResource } from '../api';
 import LiveTransportForm from './LiveTransportForm';
+import DispatchPanel from './DispatchPanel';
 
 export default function AIEvidencePanel({ event, onClose, onDemo, modelStatus }) {
   const { data, loading, error } = useResource(`/api/evidence/${event.id}`, 15000);
@@ -58,7 +59,7 @@ export default function AIEvidencePanel({ event, onClose, onDemo, modelStatus })
             {(data.nearby_measurements || []).map((reading, i) => <p key={i}>{reading.station}: {reading.pm25} {reading.units} · {reading.distance_km} km · {new Date(reading.observed_at).toLocaleString()} · {reading.source} ({reading.provenance_status})</p>)}
           </div>
           <p className="text-xs text-gray-400">Sensor anomaly: unavailable. {data.sensor_anomaly.reason}</p>
-          <p className="text-xs text-gray-400">Alert dispatch: unavailable. {data.dispatch.reason}</p>
+          <DispatchPanel key={event.id} event={event} />
           <div className="text-sm space-y-2"><h3 className="font-semibold">Transport / HYSPLIT runs</h3>
             {!data.dispersion_runs.length && <p className="text-gray-400">No model run for this event.</p>}
             {data.dispersion_runs.map(run => <p key={run.id}>{run.status} · {new Date(run.created_at).toLocaleString()}{run.error ? ` — ${run.error}` : ''}</p>)}

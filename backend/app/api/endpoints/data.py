@@ -35,7 +35,7 @@ def sensor_records(db, node=None):
 def event_record(row):
     return {"id": row.id, "event_type": row.event_type, "severity": row.severity,
             "lat": row.lat, "lon": row.lon, "detected_at": utc_iso(row.detected_at),
-            "kind": "observation", "source": "Unverified legacy record",
+            "kind": "observation", "source": "Citizen photo / local classifier (unverified)" if row.event_type.startswith("citizen_") else "Unverified legacy record",
             "provenance_status": "unverified", "status": row.status}
 
 def event_records(db, node=None):

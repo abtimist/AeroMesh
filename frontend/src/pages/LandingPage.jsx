@@ -1,449 +1,209 @@
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Wind, ShieldAlert, Activity, BarChart2, Globe, Server, ChevronDown, CheckCircle2 } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowRight, Wind, ShieldAlert, Activity, Layers, MapPin, Satellite, ChevronDown, Menu, X } from 'lucide-react';
 
-// Animation variants
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: 'easeOut' } }
-};
+const features = [
+  { icon: <Layers />, title: 'One map, more context', description: 'Explore monitoring stations, fire detections and atmospheric layers together. Choose the layers that help answer your next question.' },
+  { icon: <Wind />, title: 'Regional forecasts', description: 'Explore wind and air-quality forecasts from Open-Meteo, including GFS weather and CAMS Global air quality. These are regional estimates, not street-level measurements.' },
+  { icon: <MapPin />, title: 'Citizen observations', description: 'Use the mobile web portal to submit a location, description and photo of a pollution concern. Reports add local context for review.' },
+  { icon: <Satellite />, title: 'Satellite fire evidence', description: 'Review available NASA FIRMS thermal detections alongside other evidence. A satellite hotspot is a signal to investigate, not proof of a pollution source.' },
+  { icon: <Activity />, title: 'Ground-level measurements', description: 'Inspect available PM2.5 monitoring data from OpenAQ. Coverage and freshness depend on the contributing station and data provider.' },
+  { icon: <ShieldAlert />, title: 'Evidence before action', description: 'Review events, supporting observations and available model outputs in the command center to inform further investigation.' },
+];
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
+const steps = [
+  { title: 'Explore the signals', description: 'Open the map and select a region. Bring together available station readings, fire detections and wind layers to understand the wider picture.' },
+  { title: 'Examine the evidence', description: 'Inspect an event and compare observations with forecast context. Check timestamps and source availability before drawing conclusions.' },
+  { title: 'Add local context', description: 'Share an observation through the citizen portal. A location, description and photo can help reviewers understand what is happening on the ground.' },
+];
 
 export default function LandingPage() {
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const navRef = useRef(null);
+  const menuButtonRef = useRef(null);
+
+  useEffect(() => {
+    // WAI-ARIA APG: disclosure navigation uses native links, not menu roles.
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = () => { if (desktop.matches) setIsNavOpen(false); };
+    const closeOutside = event => {
+      if (!navRef.current?.contains(event.target)) setIsNavOpen(false);
+    };
+    desktop.addEventListener('change', closeOnDesktop);
+    document.addEventListener('pointerdown', closeOutside);
+    return () => {
+      desktop.removeEventListener('change', closeOnDesktop);
+      document.removeEventListener('pointerdown', closeOutside);
+    };
+  }, []);
+
+  const goToSection = event => {
+    const target = document.getElementById(event.currentTarget.hash.slice(1));
+    if (target) {
+      // Move focus out of the disclosure before hiding its links.
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'start' });
+    }
+    setIsNavOpen(false);
+  };
 
   return (
-    <div className="min-h-screen bg-white text-[#0F0E0C] font-['DM_Sans',sans-serif] overflow-x-hidden selection:bg-[#0F0E0C] selection:text-white">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#E8E6E1]">
-        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/icon.png" alt="AeroMesh Logo" className="w-8 h-8" />
-            <span className="font-['Geist',sans-serif] font-bold text-lg tracking-tight">AeroMesh</span>
+    <div className="landing-page" id="landing-top">
+      <a href="#landing-main" className="landing-skip" onClick={goToSection}>Skip to content</a>
+      <header className="landing-header">
+        <nav
+          ref={navRef}
+          aria-label="Main navigation"
+          className="landing-container landing-nav"
+          onKeyDown={event => {
+            if (event.key === 'Escape' && isNavOpen) {
+              setIsNavOpen(false);
+              menuButtonRef.current?.focus();
+            }
+          }}
+          onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setIsNavOpen(false);
+          }}
+        >
+          <a href="#landing-main" onClick={goToSection} className="landing-brand" aria-label="AeroMesh home">
+            <img src="/icon.png" alt="" width="32" height="32" />
+            <span>AeroMesh</span>
+          </a>
+          <div className="landing-desktop-links">
+            <a href="#features" onClick={goToSection}>Features</a>
+            <a href="#how-it-works" onClick={goToSection}>How it works</a>
+            <a href="#faq" onClick={goToSection}>FAQ</a>
           </div>
-          
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#6B6760]">
-            <a href="#features" className="hover:text-[#0F0E0C] transition-colors relative group">
-              Features
-              <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#0F0E0C] transition-all duration-200 group-hover:w-full"></span>
-            </a>
-            <a href="#how-it-works" className="hover:text-[#0F0E0C] transition-colors relative group">
-              How it works
-              <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#0F0E0C] transition-all duration-200 group-hover:w-full"></span>
-            </a>
+          <div className="landing-desktop-actions">
+            <Link to="/report">Citizen report</Link>
+            <Link to="/map" className="landing-button landing-button-dark">Open dashboard <ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
-
-          <div className="hidden md:flex items-center gap-4">
-            <Link to="/report" className="text-sm font-medium hover:text-[#6B6760] transition-colors">Citizen Report</Link>
-            <Link to="/map" className="text-sm font-medium bg-[#0F0E0C] text-white px-5 py-2.5 rounded-lg hover:bg-[#333333] transition-colors active:scale-95">
-              Launch App
-            </Link>
-          </div>
-
-          <button className="md:hidden p-2" onClick={() => setIsNavOpen(!isNavOpen)}>
-            <div className="w-5 h-4 flex flex-col justify-between">
-              <span className={`w-full h-0.5 bg-[#0F0E0C] transition-all ${isNavOpen ? 'rotate-45 translate-y-1.5' : ''}`}></span>
-              <span className={`w-full h-0.5 bg-[#0F0E0C] transition-all ${isNavOpen ? 'opacity-0' : ''}`}></span>
-              <span className={`w-full h-0.5 bg-[#0F0E0C] transition-all ${isNavOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
-            </div>
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="landing-menu-toggle"
+            aria-label={isNavOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={isNavOpen}
+            aria-controls="landing-mobile-navigation"
+            onClick={() => setIsNavOpen(open => !open)}
+          >
+            {isNavOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
           </button>
-        </div>
-        
-        {/* Mobile menu */}
-        {isNavOpen && (
-          <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b border-[#E8E6E1] p-6 flex flex-col gap-4 shadow-xl">
-            <a href="#features" onClick={() => setIsNavOpen(false)} className="text-[#6B6760] font-medium">Features</a>
-            <a href="#how-it-works" onClick={() => setIsNavOpen(false)} className="text-[#6B6760] font-medium">How it works</a>
-            <hr className="border-[#E8E6E1]" />
-            <Link to="/report" className="text-[#6B6760] font-medium">Citizen Report</Link>
-            <Link to="/map" className="text-center font-medium bg-[#0F0E0C] text-white px-5 py-3 rounded-lg">Launch App</Link>
+          <div id="landing-mobile-navigation" className="landing-mobile-links" hidden={!isNavOpen}>
+            <a href="#features" onClick={goToSection}>Features</a>
+            <a href="#how-it-works" onClick={goToSection}>How it works</a>
+            <a href="#faq" onClick={goToSection}>FAQ</a>
+            <Link to="/report" onClick={() => setIsNavOpen(false)}>Citizen report</Link>
+            <Link to="/map" onClick={() => setIsNavOpen(false)} className="landing-button landing-button-dark">Open dashboard <ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
-        )}
-      </nav>
+        </nav>
+      </header>
 
-      <main>
-        {/* Marquee Section */}
-        <section className="border-b border-[#E8E6E1] bg-[#F7F6F2] py-3 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#F7F6F2] to-transparent z-10"></div>
-          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#F7F6F2] to-transparent z-10"></div>
-          <motion.div 
-            animate={{ x: [0, -1036] }}
-            transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
-            className="flex gap-16 whitespace-nowrap opacity-40 hover:opacity-80 transition-opacity items-center w-max"
-          >
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex gap-16 items-center">
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">NOAA</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">CAMS GLOBAL</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">NASA GOES</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">ESA SENTINEL</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">OPEN-METEO</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">BRICS FEDERATION</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">EPA</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">UNEP</span>
-                <span className="font-['Geist',sans-serif] text-[13px] font-bold tracking-widest text-[#6B6760]">COPERNICUS</span>
+      <main id="landing-main" tabIndex={-1}>
+        <section className="landing-hero landing-container" aria-labelledby="hero-heading">
+          <p className="landing-eyebrow landing-enter"><span className="landing-accent-line" /> Air quality, in context</p>
+          <h1 id="hero-heading" className="landing-enter">See the unseen.<br /><span>Protect the vulnerable.</span></h1>
+          <p className="landing-hero-description landing-enter">A clearer picture of the air we share. Explore pollution observations, regional forecasts and citizen reports in one place.</p>
+          <div className="landing-actions landing-enter">
+            <Link to="/map" className="landing-button landing-button-dark">Open dashboard <ArrowRight size={18} aria-hidden="true" /></Link>
+            <Link to="/report" className="landing-button landing-button-light">Report an observation <MapPin size={18} aria-hidden="true" /></Link>
+          </div>
+          <p className="landing-hero-note">Explore the map on desktop. Share an observation from your phone.</p>
+        </section>
+
+        {/* A conceptual preview carries no invented readings or live-status indicators. */}
+        <section className="landing-preview-section landing-container" aria-labelledby="preview-heading">
+          <div className="landing-preview">
+            <div className="landing-preview-toolbar">
+              <span><Layers size={17} aria-hidden="true" /> The AeroMesh workspace</span>
+              <span className="landing-preview-label">Conceptual overview</span>
+            </div>
+            <div className="landing-preview-body">
+              <div className="landing-preview-intro">
+                <p className="landing-eyebrow">A shared view</p>
+                <h2 id="preview-heading">Connect the signals.<br />See the bigger picture.</h2>
+                <p>Move from a regional view to the evidence behind an observation.</p>
+                <Link to="/map" className="landing-text-link">Explore the workspace <ArrowRight size={17} aria-hidden="true" /></Link>
               </div>
-            ))}
-          </motion.div>
-        </section>
-
-        {/* Hero Section */}
-        <section className="pt-24 pb-32 px-6 md:pt-32 md:pb-40">
-          <div className="max-w-[1200px] mx-auto text-center flex flex-col items-center">
-            <motion.span 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-[11px] md:text-[13px] font-medium uppercase tracking-[0.08em] text-[#A8A49F] mb-6"
-            >
-              Federated Air Quality Early Warning System
-            </motion.span>
-            
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-['Geist',sans-serif] text-[48px] md:text-[88px] font-bold leading-[1.05] tracking-[-0.025em] max-w-4xl text-[#0F0E0C] mb-8"
-            >
-              See the unseen. <br className="hidden md:block" />Protect the vulnerable.
-            </motion.h1>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg md:text-[20px] text-[#6B6760] max-w-2xl leading-[1.65] mb-10"
-            >
-              AeroMesh tracks transboundary pollution plumes in real-time, forecasting dispersion across economic corridors so agencies can coordinate response before the air turns gray.
-            </motion.p>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
-            >
-              <Link to="/map" className="flex items-center justify-center gap-2 bg-[#0F0E0C] text-white px-6 py-3.5 rounded-lg font-medium hover:bg-[#333333] transition-all active:scale-95 group w-full sm:w-auto">
-                Open Dashboard
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link to="/report" className="flex items-center justify-center gap-2 bg-transparent border border-[#E8E6E1] text-[#0F0E0C] px-6 py-3.5 rounded-lg font-medium hover:bg-[#F7F6F2] transition-all active:scale-95 w-full sm:w-auto">
-                Report Incident
-              </Link>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Abstract App Preview */}
-        <section className="px-6 pb-32">
-          <div className="max-w-[1000px] mx-auto">
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.8 }}
-              className="relative rounded-2xl border border-[#E8E6E1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#F7F6F2] to-white z-0 opacity-50 pointer-events-none"></div>
-              <div className="relative z-10 rounded-xl overflow-hidden bg-[#0F0E0C] aspect-[16/10] flex items-center justify-center border border-[#E8E6E1] shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
-                <img src="/dashboard_screenshot.jpg" alt="AeroMesh Interface" className="w-full h-full object-cover" />
+              <div className="landing-layer-stack" aria-label="Workspace layers">
+                <div className="landing-preview-layer"><span className="landing-layer-icon"><Wind aria-hidden="true" /></span><div><strong>Atmospheric context</strong><span>Regional wind & air-quality forecasts</span></div></div>
+                <div className="landing-preview-layer"><span className="landing-layer-icon"><Satellite aria-hidden="true" /></span><div><strong>Environmental evidence</strong><span>Station readings & thermal detections</span></div></div>
+                <div className="landing-preview-layer"><span className="landing-layer-icon"><MapPin aria-hidden="true" /></span><div><strong>Local observations</strong><span>Reports from the citizen portal</span></div></div>
               </div>
-            </motion.div>
+            </div>
+            <p className="landing-preview-caption">An overview of the workflow. Open the dashboard to check available data and source timestamps.</p>
+          </div>
+          <div className="landing-source-strip">
+            <p>Data sources, when available</p>
+            <ul aria-label="Data sources"><li>OpenAQ</li><li>NASA FIRMS</li><li>Open-Meteo</li><li>CAMS Global</li></ul>
+            <span>Availability depends on coverage and configuration. Names identify sources, not partnerships.</span>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-24 md:py-32 bg-[#F7F6F2] px-6">
-          <div className="max-w-[1200px] mx-auto">
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              className="mb-16 md:mb-24 text-center md:text-left"
-            >
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#A8A49F] mb-4 block">Features</span>
-              <h2 className="font-['Geist',sans-serif] text-[28px] md:text-[44px] font-bold leading-[1.15] tracking-[-0.015em] text-[#0F0E0C] max-w-2xl">
-                Intelligence that crosses borders.
-              </h2>
-            </motion.div>
-
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="grid grid-cols-1 md:grid-cols-3 gap-8"
-            >
-              <FeatureCard 
-                icon={<Wind />}
-                title="HYSPLIT Dispersion"
-                description="Real-time modeling of transboundary aerosol flows, predicting where pollution will settle up to 48 hours in advance."
-              />
-              <FeatureCard 
-                icon={<Globe />}
-                title="Federated Nodes"
-                description="Distributed architecture allows regional agencies to share intelligence without centralizing sensitive environmental data."
-              />
-              <FeatureCard 
-                icon={<ShieldAlert />}
-                title="Citizen Verification"
-                description="Ground-truth satellite anomalies instantly by dispatching SMS verification requests to citizens in affected zones."
-              />
-              <FeatureCard 
-                icon={<Activity />}
-                title="Multi-modal Detection"
-                description="Fusing GOES/MODIS satellite imagery with terrestrial PM2.5 sensor networks to detect illegal burning instantly."
-              />
-              <FeatureCard 
-                icon={<BarChart2 />}
-                title="Impact Analytics"
-                description="Correlate pollution exposure with demographic vulnerabilities to prioritize emergency healthcare response."
-              />
-              <FeatureCard 
-                icon={<Server />}
-                title="Air-gapped Reliability"
-                description="Designed to operate efficiently even when regional nodes disconnect, syncing state seamlessly upon reconnection."
-              />
-            </motion.div>
-          </div>
-        </section>
-
-        {/* How It Works Section */}
-        <section id="how-it-works" className="py-24 md:py-32 px-6">
-          <div className="max-w-[1000px] mx-auto">
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              className="mb-20 text-center"
-            >
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#A8A49F] mb-4 block">Workflow</span>
-              <h2 className="font-['Geist',sans-serif] text-[28px] md:text-[44px] font-bold leading-[1.15] tracking-[-0.015em] text-[#0F0E0C]">
-                From detection to action.
-              </h2>
-            </motion.div>
-
-            <div className="space-y-24">
-              <StepItem 
-                number="01"
-                title="Detect & Validate"
-                description="Satellites spot thermal anomalies. AeroMesh cross-references terrestrial sensors and deploys localized SMS inquiries to citizens to confirm large-scale burning."
-              />
-              <StepItem 
-                number="02"
-                title="Model & Forecast"
-                description="Our backend spins up NOAA HYSPLIT trajectory models, computing precisely where the smoke plume will travel over the next two days based on high-altitude wind currents."
-              />
-              <StepItem 
-                number="03"
-                title="Coordinate & Respond"
-                description="Adjacent regions receive early warnings detailing the estimated arrival time and PM2.5 density, allowing proactive health advisories before the air quality drops."
-              />
+        <section id="features" tabIndex={-1} className="landing-section landing-tinted" aria-labelledby="features-heading">
+          <div className="landing-container">
+            <div className="landing-section-heading">
+              <div><p className="landing-eyebrow">Features</p><h2 id="features-heading">Intelligence that<br />brings context together.</h2></div>
+              <p>Start with the evidence. Explore the relationships between what is measured, what is modeled and what people observe.</p>
+            </div>
+            <div className="landing-feature-grid">
+              {features.map(feature => <FeatureCard key={feature.title} {...feature} />)}
             </div>
           </div>
         </section>
 
-        {/* Testimonials Section */}
-        <section className="py-24 bg-[#F7F6F2] px-6 border-y border-[#E8E6E1]">
-          <div className="max-w-[1200px] mx-auto">
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              className="mb-16 text-center"
-            >
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#A8A49F] mb-4 block">Social Proof</span>
-              <h2 className="font-['Geist',sans-serif] text-[28px] md:text-[44px] font-bold leading-[1.15] tracking-[-0.015em] text-[#0F0E0C]">
-                Trusted by environmental agencies.
-              </h2>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] mx-auto">
-              <TestimonialCard 
-                quote="AeroMesh allowed our regional response team to anticipate agricultural smoke plumes 24 hours before they crossed our borders. The difference in healthcare preparedness was unprecedented."
-                name="Dr. Elena Rostova"
-                role="Director of Air Quality, EPA Partner"
-              />
-              <TestimonialCard 
-                quote="We used to rely on delayed satellite sweeps. Now, combining citizen SMS verification with real-time HYSPLIT models gives us ground truth instantly."
-                name="James Chen"
-                role="Head of Environmental Monitoring"
-              />
+        <section id="how-it-works" tabIndex={-1} className="landing-section" aria-labelledby="workflow-heading">
+          <div className="landing-container landing-workflow">
+            <div><p className="landing-eyebrow">How it works</p><h2 id="workflow-heading">From a signal<br />to understanding.</h2><p className="landing-workflow-intro">A practical workflow for exploring air quality and contributing local knowledge.</p><Link to="/map" className="landing-text-link">Start with the map <ArrowRight size={17} aria-hidden="true" /></Link></div>
+            <ol className="landing-steps">
+              {steps.map((step, index) => (
+                <li key={step.title}><span className="landing-step-number" aria-hidden="true">0{index + 1}</span><div><h3>{step.title}</h3><p>{step.description}</p></div></li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="landing-section landing-tinted" aria-labelledby="context-heading">
+          <div className="landing-container landing-context">
+            <div><p className="landing-eyebrow">Know what you are seeing</p><h2 id="context-heading">Useful evidence.<br />Clear boundaries.</h2></div>
+            <div className="landing-context-copy"><p>Measurements, forecasts and citizen reports answer different questions. A regional forecast describes modeled conditions; a station records conditions at its location; a report shares an observation that needs review.</p><p>Check each source’s timestamp and coverage. AeroMesh supports investigation and awareness; follow local authorities for official health and emergency guidance.</p></div>
+          </div>
+        </section>
+
+        <section id="faq" tabIndex={-1} className="landing-section" aria-labelledby="faq-heading">
+          <div className="landing-faq-container">
+            <p className="landing-eyebrow">A little more clarity</p>
+            <h2 id="faq-heading">Frequently asked questions</h2>
+            <div className="landing-faq-list">
+              <FaqItem question="What can I explore in the dashboard?" answer="The map brings together available monitoring stations, fire detections, wind and air-quality forecast layers. Data availability varies by region, provider and deployment configuration. Check source timestamps before interpreting a layer." />
+              <FaqItem question="Do I need to install an app to report an observation?" answer="No. Open the citizen portal in your browser to submit an observation with a location, description and photo. The web portal is the reporting path; SMS reporting is not currently available." />
+              <FaqItem question="Are air-quality forecasts the same as HYSPLIT dispersion?" answer="No. Regional air-quality forecasts use CAMS Global data through Open-Meteo. Event-specific HYSPLIT dispersion is a separate, on-demand workflow that requires a configured NOAA service and a successfully completed run. Neither provides a guarantee of conditions at a specific address." />
+              <FaqItem question="Does AeroMesh operate a federated agency network?" answer="A federated agency network is a project direction, not an operational capability of this release. Regional views do not imply independent agency nodes, cross-border data-sharing agreements or official partnerships." />
             </div>
           </div>
         </section>
 
-        {/* FAQ Section */}
-        <section className="py-24 md:py-32 px-6">
-          <div className="max-w-[800px] mx-auto">
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              className="mb-16 text-center"
-            >
-              <h2 className="font-['Geist',sans-serif] text-[28px] md:text-[44px] font-bold leading-[1.15] tracking-[-0.015em] text-[#0F0E0C]">
-                Frequently asked questions
-              </h2>
-            </motion.div>
-            <div className="divide-y divide-[#E8E6E1] border-y border-[#E8E6E1]">
-              <FaqItem question="How does the federated network protect data privacy?" answer="AeroMesh nodes run locally within each country's infrastructure. Only aggregated telemetry, anomaly flags, and transboundary plume forecasts are shared across the network, ensuring sensitive national data remains air-gapped." />
-              <FaqItem question="Can citizens report incidents without the app?" answer="Yes. The Citizen Verification module dispatches standard SMS texts to users in affected regions. They can confirm or deny incidents via SMS replies or a lightweight mobile web portal without downloading anything." />
-              <FaqItem question="Which satellite data sources are integrated?" answer="We fuse thermal anomalies from GOES-R, MODIS (Aqua/Terra), and VIIRS, cross-referencing them with global PM2.5 monitoring networks and CAMS Global atmospheric forecasts." />
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-32 bg-[#F7F6F2] px-6 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="max-w-[800px] mx-auto flex flex-col items-center"
-          >
-            <h2 className="font-['Geist',sans-serif] text-[32px] md:text-[56px] font-bold leading-[1.05] tracking-[-0.02em] text-[#0F0E0C] mb-6">
-              Ready to clear the air?
-            </h2>
-            <p className="text-lg text-[#6B6760] mb-10 max-w-[500px]">
-              Access the federated network. Monitor your jurisdiction and receive transboundary alerts.
-            </p>
-            <Link to="/map" className="inline-flex items-center justify-center bg-[#0F0E0C] text-white px-8 py-4 rounded-lg font-medium hover:bg-[#333333] transition-all active:scale-95 text-lg shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)]">
-              Launch Command Center
-            </Link>
-          </motion.div>
+        <section className="landing-cta landing-container" aria-labelledby="cta-heading">
+          <p className="landing-eyebrow">Your next step</p>
+          <h2 id="cta-heading">Ready to see the bigger picture?</h2>
+          <p>Explore the available evidence, or add an observation from your community.</p>
+          <div className="landing-actions"><Link to="/map" className="landing-button landing-button-dark">Open dashboard <ArrowRight size={18} aria-hidden="true" /></Link><Link to="/report" className="landing-button landing-button-light">Make a citizen report</Link></div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white pt-24 pb-12 px-6 border-t border-[#E8E6E1]">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 mb-24">
-            <div>
-              <div className="flex items-center gap-2 mb-6">
-                <img src="/icon.png" alt="AeroMesh" className="w-6 h-6 grayscale opacity-80" />
-                <span className="font-['Geist',sans-serif] font-bold text-lg">AeroMesh</span>
-              </div>
-              <a href="mailto:contact@aeromesh.org" className="font-['Geist',sans-serif] text-[24px] md:text-[32px] font-medium text-[#0F0E0C] hover:text-[#6B6760] transition-colors">
-                contact@aeromesh.org
-              </a>
-            </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="flex flex-col gap-4">
-                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#A8A49F]">Platform</span>
-                <Link to="/map" className="text-[#6B6760] hover:text-[#0F0E0C] transition-colors">Command Center</Link>
-                <Link to="/report" className="text-[#6B6760] hover:text-[#0F0E0C] transition-colors">Citizen Portal</Link>
-                <a href="#" className="text-[#6B6760] hover:text-[#0F0E0C] transition-colors">Documentation</a>
-              </div>
-              <div className="flex flex-col gap-4">
-                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#A8A49F]">Legal</span>
-                <a href="#" className="text-[#6B6760] hover:text-[#0F0E0C] transition-colors">Privacy Policy</a>
-                <a href="#" className="text-[#6B6760] hover:text-[#0F0E0C] transition-colors">Terms of Service</a>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-[#E8E6E1] text-[#A8A49F] text-sm">
-            <p>© {new Date().getFullYear()} AeroMesh Initiative.</p>
-            <div className="flex gap-6">
-              <a href="#" className="hover:text-[#0F0E0C] transition-colors">Twitter</a>
-              <a href="#" className="hover:text-[#0F0E0C] transition-colors">GitHub</a>
-            </div>
-          </div>
-        </div>
+      <footer className="landing-footer landing-container">
+        <div><a href="#landing-main" onClick={goToSection} className="landing-brand"><img src="/icon.png" alt="" width="28" height="28" /><span>AeroMesh</span></a><p>A clearer picture of the air we share.</p></div>
+        <nav aria-label="Footer navigation"><Link to="/map">Dashboard</Link><Link to="/report">Citizen portal</Link><a href="#faq" onClick={goToSection}>Questions & answers</a></nav>
+        <p className="landing-copyright">© {new Date().getFullYear()} AeroMesh</p>
       </footer>
     </div>
   );
 }
 
 function FeatureCard({ icon, title, description }) {
-  return (
-    <motion.div 
-      variants={fadeUp}
-      whileHover={{ y: -4, boxShadow: "0 12px 30px rgba(0,0,0,0.08)" }}
-      className="bg-white border border-[#E8E6E1] rounded-xl p-8 transition-colors duration-300 relative group overflow-hidden"
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-[#F7F6F2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-      <div className="relative z-10">
-        <div className="w-10 h-10 rounded-full bg-[#F7F6F2] flex items-center justify-center text-[#0F0E0C] mb-6 group-hover:scale-110 transition-transform duration-300">
-          {icon}
-        </div>
-        <h3 className="font-['Geist',sans-serif] font-semibold text-xl mb-3 text-[#0F0E0C]">{title}</h3>
-        <p className="text-[#6B6760] leading-relaxed text-[15px]">{description}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-function StepItem({ number, title, description }) {
-  return (
-    <motion.div 
-      variants={fadeUp}
-      whileHover={{ x: 8 }}
-      className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 md:gap-16 items-start transition-transform duration-300 group"
-    >
-      <span className="font-['Geist',sans-serif] text-[48px] md:text-[64px] font-bold text-[#E8E6E1] leading-none group-hover:text-[#0F0E0C] transition-colors duration-300">
-        {number}
-      </span>
-      <div className="pt-2">
-        <h3 className="font-['Geist',sans-serif] text-[24px] font-semibold mb-3 text-[#0F0E0C]">{title}</h3>
-        <p className="text-[#6B6760] text-lg leading-relaxed max-w-2xl">{description}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-function TestimonialCard({ quote, name, role }) {
-  return (
-    <motion.div 
-      variants={fadeUp}
-      className="bg-white border border-[#E8E6E1] rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300"
-    >
-      <p className="text-[#0F0E0C] text-lg leading-relaxed mb-8">"{quote}"</p>
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-[#E8E6E1] flex items-center justify-center text-[#6B6760] font-medium font-['Geist',sans-serif]">
-          {name.charAt(0)}
-        </div>
-        <div>
-          <p className="font-['Geist',sans-serif] font-semibold text-[#0F0E0C]">{name}</p>
-          <p className="text-[#6B6760] text-sm">{role}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
+  return <article className="landing-feature-card"><div className="landing-feature-icon" aria-hidden="true">{icon}</div><h3>{title}</h3><p>{description}</p></article>;
 }
 
 function FaqItem({ question, answer }) {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="py-6">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="flex w-full items-center justify-between text-left group"
-      >
-        <span className="font-['Geist',sans-serif] text-lg font-semibold text-[#0F0E0C] group-hover:text-[#6B6760] transition-colors">{question}</span>
-        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} className="text-[#A8A49F] group-hover:text-[#0F0E0C] transition-colors">
-          <ChevronDown className="w-5 h-5" />
-        </motion.div>
-      </button>
-      <motion.div 
-        initial={false}
-        animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
-        className="overflow-hidden"
-      >
-        <p className="pt-4 text-[#6B6760] leading-relaxed">{answer}</p>
-      </motion.div>
-    </div>
-  );
+  return <details className="landing-faq-item"><summary>{question}<ChevronDown size={20} aria-hidden="true" /></summary><p>{answer}</p></details>;
 }

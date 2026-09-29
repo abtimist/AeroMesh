@@ -1,304 +1,126 @@
-import { Camera, Map as MapIcon, Bell, Home, Wind, Layers, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import AQIGauge from '../components/AQIGauge';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Camera, MapPin, Clock, ArrowLeft } from 'lucide-react';
+import { API_BASE, fetchJSON, useResource } from '../api';
+import { validatePhoto, reportLocation, loadReportIds, addReportId, nearbyRecords, REPORT_IDS_KEY } from '../citizenReports';
 
-// Mock data
-const MOCK_AQI = { pm25: 198, wind: '14 km/h SE', mixingHeight: '450m' };
-
-const AQI_BANNER_COLORS = {
-  GOOD:           'from-green-500/80 to-green-600/80',
-  MODERATE:       'from-yellow-500/80 to-yellow-600/80',
-  USG:            'from-orange-500/80 to-orange-600/80',
-  UNHEALTHY:      'from-red-500/80 to-red-600/80',
-  VERY_UNHEALTHY: 'from-purple-600/80 to-purple-700/80',
-  HAZARDOUS:      'from-[#7e0023]/80 to-[#5a0018]/80',
-};
-
-function getLevel(pm25) {
-  if (pm25 <= 50)  return 'GOOD';
-  if (pm25 <= 100) return 'MODERATE';
-  if (pm25 <= 150) return 'USG';
-  if (pm25 <= 200) return 'UNHEALTHY';
-  if (pm25 <= 300) return 'VERY_UNHEALTHY';
-  return 'HAZARDOUS';
+function ReportResult({ id }) {
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let stopped = false, timer;
+    async function refresh() {
+      try {
+        const row = await fetchJSON(`/api/citizen/reports/${id}`);
+        if (stopped) return;
+        setReport(row); setError('');
+        if (!['completed', 'failed'].includes(row.status)) timer = setTimeout(refresh, 3000);
+      } catch (err) { if (!stopped) { setError(err.message); timer = setTimeout(refresh, 10000); } }
+    }
+    refresh();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [id]);
+  return <article className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
+    <h3 className="font-medium break-all">Report {id}</h3>
+    {error && <p role="alert">{error}</p>}
+    {!report ? <p>Loading saved report…</p> : <>
+      <p>{report.status} · {new Date(report.created_at).toLocaleString()}</p>
+      <p className="text-sm text-slate-400">{report.lat.toFixed(4)}, {report.lon.toFixed(4)} · {report.location_source}{report.accuracy_m != null ? ` ±${Math.round(report.accuracy_m)} m` : ''}</p>
+      {report.error && <p role="alert" className="text-amber-300">{report.error}</p>}
+      {report.result && <>
+        <p>Model classification: <strong>{report.result.label}</strong> ({(report.result.score * 100).toFixed(1)}% model score)</p>
+        <p className="text-xs text-slate-400">{Object.entries(report.result.scores).map(([label, score]) => `${label}: ${(score * 100).toFixed(1)}%`).join(' · ')}</p>
+        <p className="text-xs text-amber-200">{report.result.interpretation}</p>
+        <p className="text-xs text-slate-400">{report.result.model} · {report.result.inference_ms} ms</p>
+      </>}
+      {report.event_id && <p>Linked unverified event #{report.event_id} is available for operator review on the map.</p>}
+      <a href={API_BASE + report.image_url} target="_blank" rel="noreferrer" className="text-blue-300 underline">View submitted photo</a>
+    </>}
+  </article>;
 }
 
-const LEVEL_ADVICE = {
-  GOOD: 'Air quality is good. Safe to go outside.',
-  MODERATE: 'Air quality is moderate. Sensitive groups should limit outdoor activity.',
-  USG: 'Unhealthy for sensitive groups. Reduce prolonged outdoor exertion.',
-  UNHEALTHY: 'Air Quality: UNHEALTHY — PM2.5: {pm25} µg/m³. Stay indoors.',
-  VERY_UNHEALTHY: 'Very unhealthy air. Avoid all outdoor activity.',
-  HAZARDOUS: 'Hazardous air quality. Stay indoors with windows closed.',
-};
-
 export default function CitizenPortalPage() {
-  const { pm25, wind } = MOCK_AQI;
-  const level = getLevel(pm25);
-  const bannerBg = AQI_BANNER_COLORS[level];
-  const advice = LEVEL_ADVICE[level].replace('{pm25}', pm25);
-
+  const [tab, setTab] = useState('report');
+  const [location, setLocation] = useState(null);
+  const [locationError, setLocationError] = useState('');
+  const [gpsBusy, setGpsBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('report');
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setError('');
-
+  const [notice, setNotice] = useState('');
+  const [ids, setIds] = useState(() => loadReportIds(localStorage));
+  const model = useResource('/api/citizen/model', 60000);
+  const conditions = useResource(location ? `/api/citizen/conditions?lat=${location.lat}&lon=${location.lon}` : null, 600000);
+  const events = useResource(tab === 'nearby' ? '/api/data/events?node=all' : null, 60000);
+  const nearby = nearbyRecords(events.data || [], location);
+  const input = 'block w-full mt-1 rounded-xl border border-white/15 bg-slate-900 p-3 text-white';
+  function gps() {
+    setGpsBusy(true); setLocationError('');
+    if (!navigator.geolocation) { setLocationError('GPS is unavailable. Enter coordinates explicitly.'); setGpsBusy(false); return; }
+    navigator.geolocation.getCurrentPosition(p => {
+      setLocation({ source: 'gps', lat: p.coords.latitude, lon: p.coords.longitude, accuracy_m: p.coords.accuracy }); setGpsBusy(false);
+    }, e => { setLocationError(`Location unavailable: ${e.message}. Enter coordinates explicitly or grant location access.`); setGpsBusy(false); }, { timeout: 10000, maximumAge: 0, enableHighAccuracy: true });
+  }
+  function manual(e) {
+    e.preventDefault(); const form = new FormData(e.currentTarget);
+    try { const value = reportLocation({ source: 'manual', lat: form.get('lat'), lon: form.get('lon') }); setLocation({ ...value, source: 'manual' }); setLocationError(''); }
+    catch (err) { setLocationError(err.message); }
+  }
+  async function submit(e) {
+    e.preventDefault(); setError(''); setNotice('');
+    const formElement = e.currentTarget;
+    const form = new FormData(formElement);
+    const photoError = validatePhoto(form.get('photo'));
+    if (photoError) { setError(photoError); return; }
     try {
-      // 1. Get GPS coordinates
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-      }).catch(() => {
-        return { coords: { latitude: 28.522, longitude: 77.275 } };
-      });
-
-      const { latitude, longitude } = pos.coords;
-
-      // 2. Prepare multipart form data
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('lat', latitude);
-      formData.append('lon', longitude);
-      formData.append('device_id', 'citizen-app-' + Math.floor(Math.random() * 1000));
-
-      // 3. Send to backend
-      const res = await fetch('http://localhost:8000/api/ingestion/report', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error('Upload failed');
-      
-      setUploadSuccess(true);
-      setTimeout(() => setUploadSuccess(false), 4000);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to upload report. Please try again.');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  };
-
-  const navItems = [
-    { icon: Home,   label: 'Home',   id: 'home' },
-    { icon: MapIcon,label: 'Map View',    id: 'map' },
-    { icon: Camera, label: 'Report', id: 'report' },
-    { icon: Bell,   label: 'Alerts', id: 'alerts' },
-  ];
-
-  return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#0F0E0C] text-white font-['DM_Sans',sans-serif] overflow-hidden relative selection:bg-white/20 selection:text-white">
-      {/* Background Abstract Map Pattern */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 2px, transparent 2px)', backgroundSize: '32px 32px' }}></div>
-        <div className="absolute top-1/4 -right-1/4 w-[800px] h-[800px] bg-blue-600 rounded-full mix-blend-screen filter blur-[120px] opacity-20"></div>
-        <div className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] bg-red-600 rounded-full mix-blend-screen filter blur-[100px] opacity-10"></div>
-      </div>
-
-      {/* ── Desktop Sidebar / Mobile Top Header ── */}
-      <header className="z-20 flex md:flex-col items-center justify-between md:justify-start md:w-64 p-4 md:p-6 bg-[#1A1A1A]/60 backdrop-blur-xl border-b md:border-b-0 md:border-r border-white/10 shrink-0 shadow-lg">
-        <div className="flex items-center gap-3 w-full">
-          <img src="/icon.png" alt="AeroMesh Logo" className="w-8 h-8 opacity-90 brightness-200 contrast-200 filter" />
-          <span className="font-['Geist',sans-serif] font-bold text-xl tracking-tight hidden sm:block md:block">AeroMesh</span>
-        </div>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex flex-col w-full mt-10 gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40 mb-2 px-3">Citizen Portal</span>
-          {navItems.map(({ icon: Icon, label, id }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left
-                ${activeTab === id ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              <Icon className="w-5 h-5 shrink-0" />
-              {label}
-            </button>
-          ))}
-          <div className="mt-8 border-t border-white/10 pt-6">
-            <Link to="/map" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all w-full">
-              <ChevronRight className="w-5 h-5 shrink-0" />
-              Main Dashboard
-            </Link>
-          </div>
-        </nav>
-
-        {/* Mobile Header elements */}
-        <div className="md:hidden flex items-center gap-3">
-           <Link to="/map" className="text-xs font-medium text-white/60 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-full border border-white/10">Dashboard</Link>
-        </div>
-      </header>
-
-      {/* ── Main Content Area ── */}
-      <main className="z-10 flex-1 overflow-y-auto pb-20 md:pb-0 relative flex flex-col items-center p-4 md:p-10">
-        
-        <div className="w-full max-w-2xl mx-auto flex flex-col gap-6 relative">
-          
-          <AnimatePresence mode="wait">
-            {/* Home Tab */}
-            {activeTab === 'home' && (
-              <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col gap-6">
-                
-                {/* Alert Banner */}
-                <div className={`bg-gradient-to-r ${bannerBg} rounded-2xl p-5 shadow-lg border border-white/20 backdrop-blur-md`}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">⚠️</span>
-                    <div>
-                      <h3 className="font-['Geist',sans-serif] font-bold text-white text-lg mb-1">Air Quality Alert</h3>
-                      <p className="text-white/90 text-sm leading-relaxed">{advice}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#1A1A1A]/40 backdrop-blur-2xl rounded-3xl shadow-xl border border-white/10 p-6 sm:p-8 flex flex-col items-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-                  <h2 className="font-['Geist',sans-serif] font-bold text-2xl text-white self-start mb-1">Current Conditions</h2>
-                  <p className="text-white/50 text-sm self-start mb-8">Detected at nearest monitoring station</p>
-                  
-                  <div className="h-64 flex items-center justify-center w-full mb-8">
-                    <AQIGauge pm25Value={pm25} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 w-full">
-                    <div className="bg-white/5 rounded-2xl border border-white/10 p-5 flex flex-col">
-                      <div className="flex items-center gap-2 text-white/50 mb-2">
-                        <Wind className="w-4 h-4" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider">Wind</span>
-                      </div>
-                      <p className="text-xl font-['Geist',sans-serif] font-bold text-white">{wind}</p>
-                      <p className="text-xs text-white/40 mt-1">Surface velocity</p>
-                    </div>
-                    <div className="bg-white/5 rounded-2xl border border-white/10 p-5 flex flex-col">
-                      <div className="flex items-center gap-2 text-white/50 mb-2">
-                        <Layers className="w-4 h-4" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider">Humidity</span>
-                      </div>
-                      <p className="text-xl font-['Geist',sans-serif] font-bold text-white">42%</p>
-                      <p className="text-xs text-white/40 mt-1">Relative humidity</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Report Tab */}
-            {activeTab === 'report' && (
-              <motion.div key="report" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col gap-6 h-full justify-center">
-                <div className="text-center mb-8">
-                  <h2 className="font-['Geist',sans-serif] font-bold text-3xl md:text-4xl text-white mb-3">File an Incident Report</h2>
-                  <p className="text-white/60 text-base md:text-lg max-w-lg mx-auto">Spotted an illegal factory emission or agricultural fire? Upload a photo to notify authorities instantly. Your report will be geotagged.</p>
-                </div>
-
-                <div className="bg-[#1A1A1A]/40 backdrop-blur-2xl rounded-3xl shadow-xl border border-white/10 p-8 text-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none"></div>
-                  
-                  {error && <p className="text-red-400 text-sm text-center mb-4 bg-red-400/10 py-2 rounded-lg border border-red-400/20">{error}</p>}
-                  
-                  <label
-                    htmlFor="citizen-photo-upload"
-                    className={`relative z-10 flex flex-col items-center justify-center gap-4 w-full h-48 md:h-64 text-white rounded-2xl font-['Geist',sans-serif] text-xl cursor-pointer transition-all border-2 border-dashed ${
-                      uploadSuccess 
-                        ? 'bg-green-500/20 border-green-500/50 text-green-400' 
-                        : 'bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/40'
-                    } ${uploading ? 'opacity-75 cursor-not-allowed border-blue-500/50 bg-blue-500/10' : ''}`}
-                  >
-                    {uploading ? (
-                      <>
-                        <Loader2 className="w-10 h-10 animate-spin text-blue-400" />
-                        <span className="font-medium text-blue-400">Processing image & location...</span>
-                      </>
-                    ) : uploadSuccess ? (
-                      <>
-                        <CheckCircle2 className="w-12 h-12 text-green-400" />
-                        <span className="font-medium">Report Successfully Filed!</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-2">
-                          <Camera className="w-8 h-8 text-white" />
-                        </div>
-                        <span className="font-semibold">Tap to capture or upload photo</span>
-                        <span className="text-sm font-normal text-white/40 font-['DM_Sans',sans-serif]">Supports JPG, PNG • Max 10MB</span>
-                      </>
-                    )}
-                  </label>
-                  <input
-                    id="citizen-photo-upload"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={handlePhotoUpload}
-                    disabled={uploading || uploadSuccess}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Map Tab */}
-            {activeTab === 'map' && (
-              <motion.div key="map" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[#1A1A1A]/40 backdrop-blur-2xl rounded-3xl border border-white/10 p-12 flex flex-col items-center justify-center text-center h-[60vh]">
-                <MapIcon className="w-16 h-16 mb-6 text-white/20" />
-                <h3 className="font-['Geist',sans-serif] font-bold text-2xl text-white mb-2">Regional Map View</h3>
-                <p className="text-white/50 text-lg max-w-sm">A simplified map showing active reports and anomalies near your location.</p>
-                <Link to="/map" className="mt-8 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-medium transition-colors border border-white/10">Open Command Center</Link>
-              </motion.div>
-            )}
-
-            {/* Alerts Tab */}
-            {activeTab === 'alerts' && (
-              <motion.div key="alerts" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col gap-4">
-                <h2 className="font-['Geist',sans-serif] font-bold text-2xl text-white mb-2">Local Alerts</h2>
-                <div className="bg-red-500/10 backdrop-blur-xl rounded-2xl p-5 border border-red-500/30 flex flex-col gap-3 relative overflow-hidden">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-red-400" />
-                    <span className="text-[11px] font-bold text-red-400 uppercase tracking-widest">Active Warning • 12 mins ago</span>
-                  </div>
-                  <p className="text-lg font-medium text-white">High PM2.5 levels detected near your location.</p>
-                  <p className="text-sm text-white/60">Stay indoors and avoid strenuous outdoor activities. Plume is expected to disperse in 4 hours.</p>
-                </div>
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-5 border border-white/10 flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-400" />
-                    <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Resolved • 2 days ago</span>
-                  </div>
-                  <p className="text-lg font-medium text-white/80">Agricultural fire reported by citizen verified.</p>
-                  <p className="text-sm text-white/40">The incident at grid 34B has been resolved by local authorities.</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-        </div>
-      </main>
-
-      {/* ── Mobile Bottom Tab Bar ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-20 bg-[#1A1A1A]/80 backdrop-blur-2xl border-t border-white/10 flex items-center justify-around px-2 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        {navItems.map(({ icon: Icon, label, id }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-colors
-              ${activeTab === id ? 'text-white' : 'text-white/40 hover:text-white/70'}`}
-          >
-            <div className={`p-1.5 rounded-full transition-colors ${activeTab === id ? 'bg-white/10' : ''}`}>
-              <Icon className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-medium tracking-wide">{label}</span>
-          </button>
-        ))}
-      </nav>
+      const coords = reportLocation(location || {});
+      for (const [key, value] of Object.entries(coords)) form.set(key, String(value));
+      setUploading(true);
+      const result = await fetchJSON('/api/citizen/reports', { method: 'POST', body: form });
+      const next = addReportId(ids, result.id);
+      setIds(next);
+      try { localStorage.setItem(REPORT_IDS_KEY, JSON.stringify(next)); } catch { setNotice('Browser storage is unavailable; save your report ID before leaving.'); }
+      formElement.reset(); setTab('history');
+    } catch (err) { setError(err.message); } finally { setUploading(false); }
+  }
+  const weather = conditions.data?.weather, air = conditions.data?.air_quality;
+  return <main className="min-h-screen bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
+    <div className="max-w-2xl mx-auto space-y-6">
+      <Link to="/" className="inline-flex gap-2 text-slate-300"><ArrowLeft size={18} /> AeroMesh home</Link>
+      <header><h1 className="text-3xl font-bold">Citizen portal</h1><p className="text-slate-400 mt-2">Report visible smoke or fire with a photo and an explicit location.</p></header>
+      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-blue-950/70 to-slate-900 p-5 space-y-3">
+        <h2 className="font-semibold flex gap-2"><MapPin size={20} /> Your report location</h2>
+        <button onClick={gps} disabled={gpsBusy} className="rounded-xl bg-blue-600 px-4 py-2 disabled:opacity-50">{gpsBusy ? 'Locating…' : 'Use my GPS location'}</button>
+        <details><summary className="cursor-pointer text-sm">Enter coordinates manually</summary><form onSubmit={manual} className="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <label>Latitude<input className={input} name="lat" type="number" min="-90" max="90" step="any" required /></label>
+          <label>Longitude<input className={input} name="lon" type="number" min="-180" max="180" step="any" required /></label>
+          <button className="col-span-2 rounded-xl border border-blue-400 p-2">Set report location</button>
+        </form></details>
+        {location && <p>{location.lat.toFixed(4)}, {location.lon.toFixed(4)} · {location.source}{location.accuracy_m != null ? ` ±${Math.round(location.accuracy_m)} m` : ''}</p>}
+        {locationError && <p role="alert" className="text-amber-300">{locationError}</p>}
+        {!location && <p className="text-sm text-slate-400">No location selected. We never substitute a default city.</p>}
+      </section>
+      {location && <section aria-label="Local forecast" className="rounded-2xl border border-white/10 p-4 text-sm space-y-2">
+        <h2 className="font-semibold">Local forecast, not a ground observation</h2>
+        {conditions.loading && <p>Fetching current forecast…</p>}
+        {conditions.error && <p role="alert">{conditions.error}</p>}
+        {weather && <p>Weather: {weather.status === 'available' ? `${weather.current.temperature_2m ?? 'Unavailable'} °C · wind ${weather.current.wind_speed_10m ?? 'Unavailable'} m/s · ${weather.current.wind_direction_10m ?? 'Unavailable'}° from` : 'Unavailable'} · {weather.source}</p>}
+        {air && <p>Air forecast: {air.status === 'available' ? `PM2.5 ${air.current.pm2_5 ?? 'Unavailable'} µg/m³ · US AQI ${air.current.us_aqi ?? 'Unavailable'}` : 'Unavailable'} · {air.source}</p>}
+        {air?.current?.time && <p className="text-xs text-slate-400">Valid {air.current.time} UTC</p>}
+      </section>}
+      <nav className="flex gap-2" aria-label="Citizen portal tabs">{[['report', Camera, 'New report'], ['history', Clock, 'My reports'], ['nearby', MapPin, 'Nearby events']].map(([key, Icon, label]) => <button key={key} onClick={() => setTab(key)} aria-pressed={tab === key} className={`flex flex-1 justify-center items-center gap-2 p-3 rounded-xl text-sm ${tab === key ? 'bg-blue-600' : 'bg-slate-800'}`}><Icon size={16} />{label}</button>)}</nav>
+      {notice && <p role="status">{notice}</p>}
+      {tab === 'report' && <form onSubmit={submit} className="rounded-3xl border border-white/10 bg-white/5 p-5 space-y-4">
+        <h2 className="text-xl font-semibold">Submit a photo for analysis</h2>
+        <p className="text-sm text-slate-400">Photos stay on this server. Embedded metadata is removed. A local model suggests fire, smoke or normal; a human must verify it.</p>
+        <label className="block">Photo<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required className={input} /></label>
+        <p className="text-xs text-slate-400">JPEG, PNG or WebP; maximum 10 MiB and 24 megapixels.</p>
+        <label className="block">What did you observe?<textarea name="description" maxLength="1000" className={input} /></label>
+        {model.data?.status !== 'ready' && <p className="text-amber-300">{model.error || 'Classifier is not ready. The server operator must install the local model before reports can be processed.'}</p>}
+        {error && <p role="alert" className="text-amber-300">{error}</p>}
+        <button disabled={uploading || !location || model.data?.status !== 'ready'} className="w-full bg-blue-600 rounded-xl p-3 font-semibold disabled:opacity-40">{uploading ? 'Uploading…' : 'Submit report'}</button>
+      </form>}
+      {tab === 'history' && <section className="space-y-3"><h2 className="text-xl font-semibold">Saved on this device</h2><p className="text-xs text-slate-400">Report IDs act as private viewing links. Keep them private. Clearing browser storage removes this local history, not server records.</p>{!ids.length && <p>No reports submitted on this device.</p>}{ids.map(id => <ReportResult key={id} id={id} />)}</section>}
+      {tab === 'nearby' && <section className="space-y-3"><h2 className="text-xl font-semibold">Recorded events within 50 km</h2>{!location ? <p>Choose your location first.</p> : events.error ? <p role="alert">{events.error}</p> : events.loading ? <p>Loading recorded events…</p> : nearby.length ? nearby.slice(0, 50).map(e => <article key={e.id} className="rounded-xl bg-white/5 p-3"><p>#{e.id} · {e.event_type?.replaceAll('_', ' ')} · {e.distance_km.toFixed(1)} km</p><p className="text-xs text-slate-400">{e.detected_at ? new Date(e.detected_at).toLocaleString() : 'Time unavailable'} · {e.source} · {e.provenance_status}</p></article>) : <p>No recorded events nearby. This is not a guarantee of clean air.</p>}<Link className="block text-blue-300 underline" to="/map">Open full map</Link></section>}
     </div>
-  );
+  </main>;
 }

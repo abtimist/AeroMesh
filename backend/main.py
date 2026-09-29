@@ -3,13 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 
-from app.api.endpoints import ingestion, analysis, data, forecast, evidence, dispersion
+from app.api.endpoints import ingestion, analysis, data, forecast, evidence, dispersion, operations
 from app.core.scheduler import start_scheduler, scheduler
 from app.db.session import engine
 from app.db.base_class import Base
 # Import all models to ensure Base.metadata creates them
 from app.models import sensor, weather, event, report
 from app.models import forecast as forecast_models
+from app.models import operations as operations_models
 from app.services.forecast_service import forecast_service
 from app.services.hysplit import hysplit_worker
 from app.services.transport import transport_worker
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
     await forecast_service.start()
     await hysplit_worker.start()
     await asyncio.to_thread(transport_worker.recover)
+    await operations.report_worker.start()
     start_scheduler()
     try:
         yield
@@ -33,6 +35,7 @@ async def lifespan(app: FastAPI):
             scheduler.shutdown(wait=False)
         await forecast_service.close()
         await hysplit_worker.close()
+        await operations.report_worker.close()
 
 
 app = FastAPI(
@@ -60,6 +63,7 @@ app.include_router(data.router, prefix="/api/data", tags=["Map Data"])
 app.include_router(forecast.router, prefix="/api/forecast", tags=["Forecasts"])
 app.include_router(evidence.router, prefix="/api/evidence", tags=["Evidence"])
 app.include_router(dispersion.router, prefix="/api/dispersion", tags=["Dispersion"])
+app.include_router(operations.router, prefix="/api/citizen", tags=["Citizen reports and dispatch"])
 
 @app.get("/")
 def read_root():

@@ -9,6 +9,20 @@ from app.db.session import SessionLocal
 from app.models.forecast import ForecastSnapshot
 
 UTC = timezone.utc
+WIND_REGIONS = ("india", "brazil", "china", "south-africa")
+
+
+def grid_metadata(node):
+    nodes = WIND_REGIONS if node == "all" else (node,)
+    return {"type": "regional-grids", "row_order": "north-to-south", "column_order": "west-to-east",
+            "grids": [{"id": name, "nx": 5, "ny": 5, "bbox": list(REGIONS[name]["bbox"]),
+                       "point_offset": index * 25, "point_count": 25} for index, name in enumerate(nodes)],
+            "description": "25 samples per regional grid; interpolate only within each region, not across gaps; not a street-level forecast"}
+
+
+def wind_metadata(wind):
+    return {**wind, "units": "m/s", "direction_convention": "meteorological-from",
+            "direction_units": "degrees clockwise from north", "vector_components": {"u": "eastward", "v": "northward"}}
 
 def utc(value):
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -17,7 +31,7 @@ def utc(value):
 def grid_points(node):
     if node == "all":
         points = []
-        for n in ["india", "brazil", "china", "south-africa"]:
+        for n in WIND_REGIONS:
             west, south, east, north = REGIONS[n]["bbox"]
             points.extend([(round(north - y * (north - south) / 4, 4), round(west + x * (east - west) / 4, 4)) for y in range(5) for x in range(5)])
         return points
@@ -85,7 +99,10 @@ class ForecastService:
             self.tasks[node] = asyncio.create_task(self.refresh(node))
         if not saved:
             return {"status": "loading", "node": node, "frames": [], "message": "Fetching forecast data"}
-        return {**saved, "refreshing": node in self.tasks, "stale": old}
+        # Metadata is deterministic for these requested sampling locations. Upgrade
+        # persisted pre-fix snapshots too, without changing their data or freshness.
+        return {**saved, "grid": grid_metadata(node), "wind": wind_metadata(saved.get("wind", {})),
+                "refreshing": node in self.tasks, "stale": old}
 
     async def fetch_series(self, url, params, points, variables):
         try:
@@ -124,9 +141,9 @@ class ForecastService:
                 payload = {"status": "available" if weather or air else "unavailable", "node": node,
                     "fetched_at": datetime.now(UTC).isoformat(), "model_run_at": None,
                     "kind": "forecast", "frames": frames,
-                    "wind": {"source": "NOAA GFS via Open-Meteo", "units": "m/s", "status": "available" if weather else "unavailable", "error": wxerror},
+                    "wind": wind_metadata({"source": "NOAA GFS via Open-Meteo", "status": "available" if weather else "unavailable", "error": wxerror}),
                     "air_quality": {"source": "CAMS Global via Open-Meteo", "pm25_units": "µg/m³", "aqi_standard": "US AQI", "aod_units": "dimensionless", "native_resolution_km": 45, "native_time_step_hours": 3, "status": "available" if air else "unavailable", "error": aqerror},
-                    "grid": {"nx": 20 if node == "all" else 5, "ny": 5, "bbox": REGIONS[node]["bbox"], "description": "100 combined sample points; interpolated wind display" if node == "all" else "25 regional sample points; interpolated wind display, not a street-level forecast"}}
+                    "grid": grid_metadata(node)}
                 # Persist ALL fetched hours (including later hours) indexed by location/time.
                 await asyncio.to_thread(save_snapshot, node + ":series", {"fetched_at": payload["fetched_at"], "weather": weather, "air_quality": air})
                 await asyncio.to_thread(save_snapshot, node, payload)
