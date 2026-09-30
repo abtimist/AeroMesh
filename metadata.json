@@ -1,0 +1,6 @@
+{
+  "name": "AeroMesh",
+  "description": "AI-powered federated early warning system for air pollution. Detect pollution plumes, forecast transboundary dispersion, and coordinate inter-agency response across BRICS economic corridors.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
