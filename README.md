@@ -299,5 +299,3 @@ This project relies on the incredible open data provided by:
 - **NOAA & ECMWF** (Via Open-Meteo)
 - **OpenAQ** (Global Air Quality Community)
 - **Hugging Face** (Open Source AI Models)
-
-*You built it. Now brag.*
