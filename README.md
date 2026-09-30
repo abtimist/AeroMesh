@@ -166,6 +166,7 @@ AeroMesh is a "System of Systems". It relies on the reliable ingestion of upstre
 | **Open-Meteo** | GFS Wind Vectors & CAMS AQI | Hourly | Drives the transport physics engine and the visual wind-layer animations. |
 | **NASA FIRMS** | VIIRS/MODIS Thermal Anomalies | Daily/Hourly | Identifies active wildfires, agricultural burns, and industrial heat sources. |
 | **OpenAQ** | PM2.5 & Ground Sensor Telemetry | Hourly | Validates the atmospheric models with hard, localized ground truths. |
+| **WAQI** | Real-time AQI Heatmap Tile Layers | Live | Provides the continuous, color-coded visual pollution map on the dashboard. |
 | **OSRM** | OpenStreetMap Routing | On-Demand | Provides driving instructions and distance metrics for response teams. |
 
 ---
@@ -298,4 +299,5 @@ This project relies on the incredible open data provided by:
 - **NASA** (FIRMS / MODIS / VIIRS)
 - **NOAA & ECMWF** (Via Open-Meteo)
 - **OpenAQ** (Global Air Quality Community)
+- **WAQI** (World Air Quality Index Project)
 - **Hugging Face** (Open Source AI Models)
