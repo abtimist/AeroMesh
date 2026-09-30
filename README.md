@@ -2,6 +2,8 @@
 
 ![AeroMesh Banner](frontend/public/icon.png)
 
+🚀 **[Live Demo Available Here](https://aeromesh-1046891749809.asia-southeast1.run.app/)**
+
 > **AeroMesh** is a real-time, federated platform designed to detect, track, and mitigate transboundary air pollution across the BRICS nations and beyond. By combining live satellite thermal anomaly data (NASA FIRMS), global wind vectors (NOAA GFS via Open-Meteo), and real-time ground sensor measurements (OpenAQ), AeroMesh provides an ultra-fast, visually stunning Command Center for environmental officers and a seamless, AI-powered reporting portal for citizens.
 
 ---
